@@ -1,0 +1,1 @@
+[Complete implementation code matching the template language and structure]
