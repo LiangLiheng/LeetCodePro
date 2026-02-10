@@ -1,0 +1,1 @@
+NOW execute: Read the problem. Design your solution. Solve it. Output your complete actual solution in the required format.
