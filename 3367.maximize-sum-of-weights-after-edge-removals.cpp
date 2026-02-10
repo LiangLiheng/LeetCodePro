@@ -3,66 +3,43 @@
 #
 # [3367] Maximize Sum of Weights after Edge Removals
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maximizeSumOfWeights(vector<vector<int>>& edges, int k) {
         int n = edges.size() + 1;
-        vector<vector<pair<int, long long>>> adj(n);
-        
-        // Build adjacency list
-        for (auto& e : edges) {
-            int u = e[0], v = e[1];
-            long long w = e[2];
-            adj[u].push_back({v, w});
-            adj[v].push_back({u, w});
+        vector<vector<pair<int, int>>> adj(n);
+        for (const auto& e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            adj[u].emplace_back(v, w);
+            adj[v].emplace_back(u, w);
         }
-        
-        // dp[node][0] = max sum when edge to parent is not included
-        // dp[node][1] = max sum when edge to parent is included
-        vector<array<long long, 2>> dp(n);
-        
-        function<void(int, int)> dfs = [&](int u, int parent) {
-            vector<long long> gains;
+        vector<long long> dpA(n), dpC(n);
+        auto dfs = [&](auto&& self, int u, int p) -> void {
+            vector<long long> benefits;
             long long base = 0;
-            
             for (auto [v, w] : adj[u]) {
-                if (v == parent) continue;
-                
-                dfs(v, u);
-                
-                // Base: don't include any edge to children
-                base += dp[v][0];
-                
-                // Gain from including edge (u, v)
-                long long gain = w + dp[v][1] - dp[v][0];
-                gains.push_back(gain);
+                if (v == p) continue;
+                self(self, v, u);
+                base += dpA[v];
+                long long ben = (long long)w + dpC[v] - dpA[v];
+                benefits.push_back(ben);
             }
-            
-            // Sort gains in descending order
-            sort(gains.rbegin(), gains.rend());
-            
-            // dp[u][0]: edge to parent not used, can use up to k edges to children
-            dp[u][0] = base;
-            for (int i = 0; i < min((int)gains.size(), k); i++) {
-                if (gains[i] > 0) {
-                    dp[u][0] += gains[i];
-                }
-            }
-            
-            // dp[u][1]: edge to parent used, can use up to k-1 edges to children
-            dp[u][1] = base;
-            for (int i = 0; i < min((int)gains.size(), k - 1); i++) {
-                if (gains[i] > 0) {
-                    dp[u][1] += gains[i];
-                }
-            }
+            auto get_extra = [&](int lim) -> long long {
+                vector<long long> pos;
+                for (auto b : benefits) if (b > 0LL) pos.push_back(b);
+                sort(pos.rbegin(), pos.rend());
+                long long ex = 0;
+                int tk = min((int)pos.size(), lim);
+                for (int i = 0; i < tk; ++i) ex += pos[i];
+                return ex;
+            };
+            dpA[u] = base + get_extra(k);
+            dpC[u] = base + get_extra(k - 1);
         };
-        
-        dfs(0, -1);
-        
-        // Root node has no parent, so return dp[0][0]
-        return dp[0][0];
+        dfs(dfs, 0, -1);
+        return dpA[0];
     }
 };
 # @lc code=end
