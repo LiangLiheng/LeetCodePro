@@ -6,8 +6,17 @@
 # @lc code=start
 class Solution {
 public:
+    vector<vector<pair<int, int>>> tree;
+    vector<int> nums;
+    int maxLen;
+    int minNodes;
+    
     vector<int> longestSpecialPath(vector<vector<int>>& edges, vector<int>& nums) {
         int n = nums.size();
+        this->nums = nums;
+        tree.resize(n);
+        maxLen = 0;
+        minNodes = INT_MAX;
         
         // Build adjacency list
         vector<vector<pair<int, int>>> graph(n);
@@ -17,77 +26,70 @@ public:
             graph[v].push_back({u, len});
         }
         
-        // Root the tree at node 0 - build parent array
-        vector<int> parent(n, -1);
-        vector<vector<pair<int, int>>> children(n);
-        buildTree(0, -1, graph, parent, children);
+        // Root the tree at node 0
+        buildTree(0, -1, graph);
         
-        int maxLen = 0;
-        int minNodes = INT_MAX;
-        
-        // Explore downward paths from each node
+        // Try starting from each node
         for (int start = 0; start < n; start++) {
-            unordered_map<int, int> valCount;
-            exploreDownward(start, children, nums, valCount, 0, 0, maxLen, minNodes);
+            unordered_map<int, int> freq;
+            findPaths(start, freq, 0, 0, 0);
         }
         
         return {maxLen, minNodes};
     }
     
-private:
-    void buildTree(int node, int par, vector<vector<pair<int, int>>>& graph,
-                   vector<int>& parent, vector<vector<pair<int, int>>>& children) {
-        parent[node] = par;
+    void buildTree(int node, int parent, vector<vector<pair<int, int>>>& graph) {
         for (auto& [child, len] : graph[node]) {
-            if (child != par) {
-                children[node].push_back({child, len});
-                buildTree(child, node, graph, parent, children);
-            }
+            if (child == parent) continue;
+            tree[node].push_back({child, len});
+            buildTree(child, node, graph);
         }
     }
     
-    void exploreDownward(int node, vector<vector<pair<int, int>>>& children,
-                        vector<int>& nums, unordered_map<int, int>& valCount,
-                        int curLen, int nodeCount, int& maxLen, int& minNodes) {
+    void findPaths(int node, unordered_map<int, int>& freq, 
+                   int duplicates, int pathLen, int nodeCount) {
         
         int val = nums[node];
-        int prevCount = valCount[val];
-        valCount[val]++;
+        int oldFreq = freq[val];
+        freq[val]++;
+        
+        // Check if this node can be added to the path
+        int newDuplicates = duplicates;
+        
+        if (oldFreq == 1) {
+            if (duplicates == 1) {
+                // Can't add this node
+                freq[val]--;
+                return;
+            }
+            newDuplicates = 1;
+        } else if (oldFreq >= 2) {
+            // Can't add this node
+            freq[val]--;
+            return;
+        }
+        
         nodeCount++;
         
-        // Check if path is valid: at most one value appears twice, no value appears 3+ times
-        bool valid = true;
-        int duplicates = 0;
-        for (auto& [v, cnt] : valCount) {
-            if (cnt > 2) {
-                valid = false;
-                break;
-            }
-            if (cnt == 2) duplicates++;
-        }
-        if (duplicates > 1) valid = false;
-        
-        if (valid) {
-            if (curLen > maxLen) {
-                maxLen = curLen;
+        // Update result (only for paths with at least 2 nodes)
+        if (nodeCount >= 2) {
+            if (pathLen > maxLen) {
+                maxLen = pathLen;
                 minNodes = nodeCount;
-            } else if (curLen == maxLen) {
-                minNodes = min(minNodes, nodeCount);
+            } else if (pathLen == maxLen && nodeCount < minNodes) {
+                minNodes = nodeCount;
             }
         }
         
-        // Only explore children if path is still valid
-        if (valid) {
-            for (auto& [child, edgeLen] : children[node]) {
-                exploreDownward(child, children, nums, valCount,
-                              curLen + edgeLen, nodeCount, maxLen, minNodes);
-            }
+        // Continue to children (descendants)
+        for (auto& [child, edgeLen] : tree[node]) {
+            findPaths(child, freq, newDuplicates, pathLen + edgeLen, nodeCount);
         }
         
         // Backtrack
-        valCount[val]--;
-        if (valCount[val] == 0) {
-            valCount.erase(val);
+        freq[val]--;
+        if (freq[val] == 0) {
+            freq.erase(val);
         }
     }
 };
