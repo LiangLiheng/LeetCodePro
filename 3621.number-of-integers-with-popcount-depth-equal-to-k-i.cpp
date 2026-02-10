@@ -1,30 +1,87 @@
-Step 1: Understanding the problem - We need to count numbers in [1, n] whose popcount-depth equals k. Popcount-depth is defined as the number of times we apply popcount operation until reaching 1.
-
-Step 2: Key insight - Identify the recursive relationship. For most numbers, depth(x) might relate to depth(popcount(x)). But before applying this universally, verify it on base cases.
-
-Step 3: Verify recursive formula on base cases:
-- x=1: By definition, depth(1) = 0 (already at target, no operations needed)
-- x=2: popcount(2) = 1, depth(1) = 0, so depth(2) = 1 + 0 = 1
-- x=3: popcount(3) = 2, depth(2) = 1, so depth(3) = 1 + 1 = 2
-- Verify the pattern holds and identify any special cases
-
-Step 4: Handle boundary cases explicitly:
-- If k=0: Only x=1 has depth 0 by definition
-- For k≥1: x=1 should NOT be counted (it has depth 0, not k≥1)
-- Ensure the algorithm correctly excludes or includes x=1 based on k
-
-Step 5: Algorithm design:
-- Precompute depth for small numbers (1 to 60 covers all possible popcounts)
-- Identify which popcounts correspond to depth k-1
-- Use digit DP to count numbers with those popcounts, being careful about x=1
-
-Step 6: Validate against provided examples:
-- Example 1: n=4, k=1, expected=2
-  - Trace through x=1,2,3,4 and verify which have depth exactly 1
-  - Confirm count matches expected output
-- Example 2: n=7, k=2, expected=3
-  - Trace through x=1..7 and verify which have depth exactly 2
-  - Confirm count matches expected output
-- If mismatch found, identify which cases are handled incorrectly and why
-
-Step 7: Implement the solution based on your analysis above. Write the complete C++ code in the provided template format, implementing the algorithm you've designed.
+#
+# @lc app=leetcode id=3621 lang=cpp
+#
+# [3621] Number of Integers With Popcount-Depth Equal to K I
+#
+# @lc code=start
+class Solution {
+public:
+    long long popcountDepth(long long n, int k) {
+        if (k == 0) {
+            return n >= 1 ? 1 : 0; // Only x=1 has depth 0
+        }
+        
+        // Step 1: Precompute depth for popcount values
+        unordered_map<int, int> depth;
+        depth[1] = 0;
+        
+        function<int(int)> getDepth = [&](int val) -> int {
+            if (val == 1) return 0;
+            if (depth.count(val)) return depth[val];
+            int pc = __builtin_popcount(val);
+            return depth[val] = getDepth(pc) + 1;
+        };
+        
+        // Compute depth for all values from 2 to 60
+        for (int i = 2; i <= 60; i++) {
+            getDepth(i);
+        }
+        
+        // Step 2: Find popcount values that lead to depth k
+        // We want popcount values p such that depth(p) = k - 1
+        set<int> target_popcounts;
+        for (int i = 1; i <= 60; i++) {
+            if (depth[i] == k - 1) {
+                target_popcounts.insert(i);
+            }
+        }
+        
+        if (target_popcounts.empty()) return 0;
+        
+        // Step 3: Count numbers with those popcounts using digit DP
+        vector<int> bits;
+        long long temp = n;
+        while (temp > 0) {
+            bits.push_back(temp & 1);
+            temp >>= 1;
+        }
+        reverse(bits.begin(), bits.end());
+        
+        long long result = 0;
+        
+        for (int pc : target_popcounts) {
+            map<tuple<int, int, bool>, long long> dp;
+            
+            function<long long(int, int, bool)> solve = [&](int pos, int ones, bool tight) -> long long {
+                if (ones > pc) return 0;
+                if (pos == bits.size()) {
+                    return ones == pc ? 1 : 0;
+                }
+                
+                auto key = make_tuple(pos, ones, tight);
+                if (dp.count(key)) return dp[key];
+                
+                int maxDigit = tight ? bits[pos] : 1;
+                long long res = 0;
+                
+                for (int d = 0; d <= maxDigit; d++) {
+                    res += solve(pos + 1, ones + d, tight && (d == maxDigit));
+                }
+                
+                return dp[key] = res;
+            };
+            
+            long long count = solve(0, 0, true);
+            
+            // Special case: if pc = 1 and k > 0, exclude x = 1
+            if (pc == 1 && k > 0 && n >= 1) {
+                count--;
+            }
+            
+            result += count;
+        }
+        
+        return result;
+    }
+};
+# @lc code=end
