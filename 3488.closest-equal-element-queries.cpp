@@ -3,43 +3,38 @@
 #
 # [3488] Closest Equal Element Queries
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> solveQueries(vector<int>& nums, vector<int>& queries) {
         int n = nums.size();
-        
-        // Build a map from value to list of indices
-        unordered_map<int, vector<int>> valueToIndices;
-        for (int i = 0; i < n; i++) {
-            valueToIndices[nums[i]].push_back(i);
+        vector<int> min_dist(n, -1);
+        unordered_map<int, vector<int>> mp;
+        for(int i = 0; i < n; i++) {
+            mp[nums[i]].push_back(i);
         }
-        
-        vector<int> answer;
-        for (int query : queries) {
-            int value = nums[query];
-            vector<int>& indices = valueToIndices[value];
-            
-            // If only one index has this value, return -1
-            if (indices.size() == 1) {
-                answer.push_back(-1);
-                continue;
+        for(auto& p : mp) {
+            vector<int>& positions = p.second;
+            int m = positions.size();
+            if (m < 2) continue;
+            for(int k = 0; k < m; k++) {
+                int prev_k = (k - 1 + m) % m;
+                int next_k = (k + 1) % m;
+                int idx = positions[k];
+                int pidx = positions[prev_k];
+                int nidx = positions[next_k];
+                int d1 = abs(idx - pidx);
+                d1 = min(d1, n - d1);
+                int d2 = abs(idx - nidx);
+                d2 = min(d2, n - d2);
+                min_dist[idx] = min(d1, d2);
             }
-            
-            // Find minimum circular distance to other indices
-            int minDist = INT_MAX;
-            for (int idx : indices) {
-                if (idx != query) {
-                    int directDist = abs(idx - query);
-                    int wrapDist = n - directDist;
-                    int circularDist = min(directDist, wrapDist);
-                    minDist = min(minDist, circularDist);
-                }
-            }
-            
-            answer.push_back(minDist);
         }
-        
+        vector<int> answer(queries.size());
+        for(int i = 0; i < queries.size(); i++) {
+            answer[i] = min_dist[queries[i]];
+        }
         return answer;
     }
 };
