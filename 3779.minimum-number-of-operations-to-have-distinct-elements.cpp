@@ -9,26 +9,26 @@ public:
     int minOperations(vector<int>& nums) {
         int operations = 0;
         int start = 0;
-        int n = nums.size();
         
-        while (start < n) {
-            // Check if remaining elements are all distinct
+        while (start < nums.size()) {
+            // Check if remaining subarray has all distinct elements
             unordered_set<int> seen;
-            bool hasDuplicate = false;
-            for (int i = start; i < n; i++) {
+            bool allDistinct = true;
+            
+            for (int i = start; i < nums.size(); i++) {
                 if (seen.count(nums[i])) {
-                    hasDuplicate = true;
+                    allDistinct = false;
                     break;
                 }
                 seen.insert(nums[i]);
             }
             
-            if (!hasDuplicate) {
-                break;
+            if (allDistinct) {
+                break;  // All remaining elements are distinct
             }
             
             // Remove first 3 elements (or all remaining if < 3)
-            start += 3;
+            start += min(3, (int)nums.size() - start);
             operations++;
         }
         
