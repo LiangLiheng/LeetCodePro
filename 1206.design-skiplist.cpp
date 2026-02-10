@@ -5,83 +5,84 @@
 #
 
 # @lc code=start
+#include <vector>
+#include <cstdlib>
+
 class Skiplist {
 private:
     struct Node {
-        int val;
-        Node* forward[16];
-        Node(int v) : val(v) {
-            memset(forward, 0, sizeof(forward));
-        }
+        int value;
+        std::vector<Node*> forward;
+        Node(int _value, int level) : value(_value), forward(level + 1, nullptr) {}
     };
 
-    Node* head;
     static const int MAX_LEVEL = 16;
+    Node* head;
 
     int getRandomLevel() {
-        int level = 1;
-        while ((rand() % 2 == 0) && level < MAX_LEVEL) {
-            ++level;
+        int level = 0;
+        while ((rand() % 2 == 0) && level < MAX_LEVEL - 1) {
+            level++;
         }
         return level;
     }
+
 public:
     Skiplist() {
-        head = new Node(-1);
+        head = new Node(-1, MAX_LEVEL);
     }
-
+    
     bool search(int target) {
-        Node* curr = head;
-        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
-            while (curr->forward[i] && curr->forward[i]->val < target) {
-                curr = curr->forward[i];
+        Node* current = head;
+        for (int i = MAX_LEVEL; i >= 0; i--) {
+            while (current->forward[i] != nullptr && current->forward[i]->value < target) {
+                current = current->forward[i];
+            }
+            if (current->forward[i] != nullptr && current->forward[i]->value == target) {
+                return true;
             }
         }
-        curr = curr->forward[0];
-        return curr && curr->val == target;
+        return false;
     }
-
+    
     void add(int num) {
-        Node* update[MAX_LEVEL];
-        memset(update, 0, sizeof(update));
-        Node* curr = head;
-        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
-            while (curr->forward[i] && curr->forward[i]->val < num) {
-                curr = curr->forward[i];
+        std::vector<Node*> update(MAX_LEVEL + 1, head);
+        Node* current = head;
+        for (int i = MAX_LEVEL; i >= 0; i--) {
+            while (current->forward[i] != nullptr && current->forward[i]->value < num) {
+                current = current->forward[i];
             }
-            update[i] = curr;
+            update[i] = current;
         }
-        Node* newnode = new Node(num);
-        int rlevel = getRandomLevel();
-        for (int i = 0; i < rlevel; ++i) {
-            newnode->forward[i] = update[i]->forward[i];
-            update[i]->forward[i] = newnode;
+        int random_level = getRandomLevel();
+        Node* new_node = new Node(num, random_level);
+        for (int i = 0; i <= random_level; i++) {
+            new_node->forward[i] = update[i]->forward[i];
+            update[i]->forward[i] = new_node;
         }
     }
-
+    
     bool erase(int num) {
-        Node* update[MAX_LEVEL];
-        memset(update, 0, sizeof(update));
-        Node* curr = head;
-        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
-            while (curr->forward[i] && curr->forward[i]->val < num) {
-                curr = curr->forward[i];
+        std::vector<Node*> update(MAX_LEVEL + 1, head);
+        Node* current = head;
+        for (int i = MAX_LEVEL; i >= 0; i--) {
+            while (current->forward[i] != nullptr && current->forward[i]->value < num) {
+                current = current->forward[i];
             }
-            update[i] = curr;
+            update[i] = current;
         }
-        curr = curr->forward[0];
-        if (!curr || curr->val != num) {
-            return false;
-        }
-        for (int i = 0; i < MAX_LEVEL; ++i) {
-            if (update[i]->forward[i] == curr) {
-                update[i]->forward[i] = curr->forward[i];
-            } else {
-                break;
+        Node* candidate = update[0]->forward[0];
+        if (candidate != nullptr && candidate->value == num) {
+            int level = static_cast<int>(candidate->forward.size()) - 1;
+            for (int i = 0; i <= level; i++) {
+                if (update[i]->forward[i] == candidate) {
+                    update[i]->forward[i] = candidate->forward[i];
+                }
             }
+            delete candidate;
+            return true;
         }
-        delete curr;
-        return true;
+        return false;
     }
 };
 
