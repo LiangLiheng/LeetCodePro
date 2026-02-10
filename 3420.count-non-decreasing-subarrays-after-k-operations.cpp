@@ -11,21 +11,20 @@ public:
         long long count = 0;
         
         for (int left = 0; left < n; left++) {
-            long long cost = 0;
             long long max_val = nums[left];
+            long long operations = 0;
             
             for (int right = left; right < n; right++) {
-                // Calculate cost to make nums[left...right] non-decreasing
                 if (nums[right] < max_val) {
-                    cost += max_val - nums[right];
+                    operations += max_val - nums[right];
                 } else {
                     max_val = nums[right];
                 }
                 
-                if (cost <= k) {
+                if (operations <= k) {
                     count++;
                 } else {
-                    break;  // No point in extending further from this left
+                    break;
                 }
             }
         }
