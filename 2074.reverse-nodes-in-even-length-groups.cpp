@@ -3,6 +3,7 @@
 #
 # [2074] Reverse Nodes in Even Length Groups
 #
+
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -19,38 +20,42 @@ public:
     ListNode* reverseEvenLengthGroups(ListNode* head) {
         ListNode* dummy = new ListNode(0);
         dummy->next = head;
-        ListNode* prev_tail = dummy;
-        int group_size = 1;
-        while (prev_tail->next != nullptr) {
-            ListNode* group_start = prev_tail->next;
-            ListNode* group_end = group_start;
-            int actual_len = 1;
-            for (int i = 1; i < group_size && group_end->next != nullptr; ++i) {
-                group_end = group_end->next;
-                ++actual_len;
+        ListNode* pre = dummy;
+        ListNode* curr = head;
+        int groupSize = 1;
+        while (curr != nullptr) {
+            ListNode* nextGroupStart = curr;
+            int actualLength = 0;
+            while (actualLength < groupSize && nextGroupStart != nullptr) {
+                nextGroupStart = nextGroupStart->next;
+                ++actualLength;
             }
-            ListNode* next_start = group_end->next;
-            if (actual_len % 2 == 0) {
-                ListNode* new_head = nullptr;
-                ListNode* curr = group_start;
-                ListNode* new_tail = group_start;
-                for (int i = 0; i < actual_len; ++i) {
-                    ListNode* nxt = curr->next;
-                    curr->next = new_head;
-                    new_head = curr;
-                    curr = nxt;
+            if (actualLength % 2 == 0) {
+                // Reverse the group
+                ListNode* prevNode = nullptr;
+                ListNode* currentNode = curr;
+                for (int i = 0; i < actualLength; ++i) {
+                    ListNode* nextNode = currentNode->next;
+                    currentNode->next = prevNode;
+                    prevNode = currentNode;
+                    currentNode = nextNode;
                 }
-                new_tail->next = next_start;
-                prev_tail->next = new_head;
-                prev_tail = new_tail;
+                curr->next = nextGroupStart;
+                pre->next = prevNode;
+                pre = curr;
+                curr = nextGroupStart;
             } else {
-                prev_tail = group_end;
+                // Skip: move pre to group tail
+                ListNode* groupTail = curr;
+                for (int i = 1; i < actualLength; ++i) {
+                    groupTail = groupTail->next;
+                }
+                pre = groupTail;
+                curr = nextGroupStart;
             }
-            ++group_size;
+            ++groupSize;
         }
-        ListNode* ans = dummy->next;
-        delete dummy;
-        return ans;
+        return dummy->next;
     }
 };
 # @lc code=end
