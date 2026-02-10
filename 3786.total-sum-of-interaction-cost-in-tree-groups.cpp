@@ -3,55 +3,38 @@
 #
 # [3786] Total Sum of Interaction Cost in Tree Groups
 #
+
 # @lc code=start
 class Solution {
 public:
     long long interactionCosts(int n, vector<vector<int>>& edges, vector<int>& group) {
-        // Build adjacency list
         vector<vector<int>> adj(n);
-        for (auto& edge : edges) {
-            adj[edge[0]].push_back(edge[1]);
-            adj[edge[1]].push_back(edge[0]);
+        for (const auto& e : edges) {
+            adj[e[0]].push_back(e[1]);
+            adj[e[1]].push_back(e[0]);
         }
-        
-        // Count total nodes of each group
-        vector<int> totalCount(21, 0);
-        for (int g : group) {
-            totalCount[g]++;
-        }
-        
-        long long result = 0;
-        
-        // DFS to calculate contribution of each edge
-        function<vector<int>(int, int)> dfs = [&](int node, int parent) -> vector<int> {
-            // Count nodes of each group in subtree rooted at node
-            vector<int> count(21, 0);
-            count[group[node]]++;
-            
-            for (int child : adj[node]) {
-                if (child == parent) continue;
-                
-                vector<int> childCount = dfs(child, node);
-                
-                // Calculate contribution of edge (node, child)
-                for (int g = 1; g <= 20; g++) {
-                    long long inChild = childCount[g];
-                    long long notInChild = totalCount[g] - childCount[g];
-                    result += inChild * notInChild;
-                }
-                
-                // Merge childCount into count
-                for (int g = 1; g <= 20; g++) {
-                    count[g] += childCount[g];
-                }
+        long long answer = 0;
+        for (int g = 1; g <= 20; ++g) {
+            int total_cnt = 0;
+            for (int i = 0; i < n; ++i) {
+                if (group[i] == g) ++total_cnt;
             }
-            
-            return count;
-        };
-        
-        dfs(0, -1);
-        
-        return result;
+            if (total_cnt < 2) continue;
+            long long contrib = 0;
+            auto dfs = [&](auto&& self, int u, int par) -> int {
+                int sz = (group[u] == g ? 1 : 0);
+                for (int v : adj[u]) {
+                    if (v == par) continue;
+                    int s = self(self, v, u);
+                    contrib += 1LL * s * (total_cnt - s);
+                    sz += s;
+                }
+                return sz;
+            };
+            dfs(dfs, 0, -1);
+            answer += contrib;
+        }
+        return answer;
     }
 };
 # @lc code=end
