@@ -8,30 +8,37 @@ class Solution {
 public:
     vector<long long> countStableSubarrays(vector<int>& nums, vector<vector<int>>& queries) {
         int n = nums.size();
-        vector<int> maxLen(n);
+        vector<int> max_reach(n);
         
-        // Compute maxLen[i]: maximum length of non-decreasing subarray starting at i
-        maxLen[n-1] = 1;
-        for (int i = n-2; i >= 0; i--) {
-            if (nums[i] <= nums[i+1]) {
-                maxLen[i] = maxLen[i+1] + 1;
+        // Precompute max_reach for each position
+        // max_reach[i] = maximum index j such that nums[i..j] is non-decreasing
+        for (int i = n - 1; i >= 0; i--) {
+            if (i == n - 1) {
+                max_reach[i] = i;
+            } else if (nums[i] <= nums[i + 1]) {
+                max_reach[i] = max_reach[i + 1];
             } else {
-                maxLen[i] = 1;
+                max_reach[i] = i;
             }
         }
         
-        // Process each query
-        vector<long long> ans;
+        // Process queries
+        vector<long long> result;
         for (auto& query : queries) {
             int l = query[0], r = query[1];
             long long count = 0;
+            
+            // For each starting position in [l, r]
             for (int i = l; i <= r; i++) {
-                count += min(maxLen[i], r - i + 1);
+                // Count stable subarrays starting at i
+                // They can extend up to min(max_reach[i], r)
+                count += min(max_reach[i], r) - i + 1;
             }
-            ans.push_back(count);
+            
+            result.push_back(count);
         }
         
-        return ans;
+        return result;
     }
 };
 # @lc code=end
