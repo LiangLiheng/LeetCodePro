@@ -7,42 +7,46 @@
 class Solution {
 public:
     vector<int> minDeletions(string s, vector<vector<int>>& queries) {
-        vector<int> answer;
+        vector<int> result;
         
         for (auto& query : queries) {
             if (query[0] == 1) {
-                // Type 1: Flip character at index j
+                // Type 1: Flip operation
                 int j = query[1];
                 s[j] = (s[j] == 'A') ? 'B' : 'A';
             } else {
-                // Type 2: Compute minimum deletions for substring s[l..r]
+                // Type 2: Compute minimum deletions
                 int l = query[1];
                 int r = query[2];
                 
-                // Dynamic programming to find longest alternating subsequence
-                // dpA: max length of alternating subsequence ending with 'A'
-                // dpB: max length of alternating subsequence ending with 'B'
-                int dpA = 0, dpB = 0;
-                
+                // Try pattern starting with 'A'
+                int countA = 0;
+                char expected = 'A';
                 for (int i = l; i <= r; i++) {
-                    if (s[i] == 'A') {
-                        // Can extend sequence ending with 'B', or keep current 'A' sequence
-                        dpA = max(dpA, dpB + 1);
-                    } else { // s[i] == 'B'
-                        // Can extend sequence ending with 'A', or keep current 'B' sequence
-                        dpB = max(dpB, dpA + 1);
+                    if (s[i] == expected) {
+                        countA++;
+                        expected = (expected == 'A') ? 'B' : 'A';
                     }
                 }
                 
-                // Maximum length of alternating subsequence
-                int maxLength = max(dpA, dpB);
-                // Minimum deletions = total length - max alternating length
-                int deletions = (r - l + 1) - maxLength;
-                answer.push_back(deletions);
+                // Try pattern starting with 'B'
+                int countB = 0;
+                expected = 'B';
+                for (int i = l; i <= r; i++) {
+                    if (s[i] == expected) {
+                        countB++;
+                        expected = (expected == 'A') ? 'B' : 'A';
+                    }
+                }
+                
+                // Choose the pattern with maximum matches
+                int maxKeep = max(countA, countB);
+                int deletions = (r - l + 1) - maxKeep;
+                result.push_back(deletions);
             }
         }
         
-        return answer;
+        return result;
     }
 };
 # @lc code=end
