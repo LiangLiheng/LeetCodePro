@@ -19,8 +19,7 @@ class Solution {
 public:
     ListNode* insertGreatestCommonDivisors(ListNode* head) {
         if (!head || !head->next) return head;
-        
-        auto gcd_func = [](int a, int b) -> int {
+        auto gcd = [](int a, int b) -> int {
             while (b != 0) {
                 int temp = b;
                 b = a % b;
@@ -28,13 +27,12 @@ public:
             }
             return a;
         };
-        
-        ListNode* cur = head;
-        while (cur && cur->next) {
-            int g = gcd_func(cur->val, cur->next->val);
-            ListNode* newNode = new ListNode(g, cur->next);
-            cur->next = newNode;
-            cur = newNode->next;
+        ListNode* curr = head;
+        while (curr && curr->next) {
+            int g = gcd(curr->val, curr->next->val);
+            ListNode* new_node = new ListNode(g, curr->next);
+            curr->next = new_node;
+            curr = new_node->next;
         }
         return head;
     }
