@@ -7,19 +7,19 @@
 class Solution {
 public:
     int uniqueXorTriplets(vector<int>& nums) {
-        unordered_set<int> xor_values;
+        unordered_set<int> unique_xors;
         int n = nums.size();
         
         for (int i = 0; i < n; i++) {
             for (int j = i; j < n; j++) {
                 for (int k = j; k < n; k++) {
                     int xor_val = nums[i] ^ nums[j] ^ nums[k];
-                    xor_values.insert(xor_val);
+                    unique_xors.insert(xor_val);
                 }
             }
         }
         
-        return xor_values.size();
+        return unique_xors.size();
     }
 };
 # @lc code=end
