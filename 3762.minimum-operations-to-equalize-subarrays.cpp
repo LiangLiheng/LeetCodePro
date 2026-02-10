@@ -10,20 +10,15 @@ public:
         vector<long long> result;
         
         for (auto& query : queries) {
-            int left = query[0];
-            int right = query[1];
+            int l = query[0];
+            int r = query[1];
             
-            // Extract subarray
-            vector<long long> subarray;
-            for (int i = left; i <= right; i++) {
-                subarray.push_back(nums[i]);
-            }
-            
-            // Check if all elements have same remainder mod k
-            long long firstRemainder = subarray[0] % k;
+            // Check if all elements have the same remainder mod k
+            int remainder = nums[l] % k;
             bool possible = true;
-            for (long long val : subarray) {
-                if (val % k != firstRemainder) {
+            
+            for (int i = l; i <= r; i++) {
+                if (nums[i] % k != remainder) {
                     possible = false;
                     break;
                 }
@@ -34,20 +29,29 @@ public:
                 continue;
             }
             
-            // Sort to find median
-            sort(subarray.begin(), subarray.end());
-            
-            // Find median
-            int n = subarray.size();
-            long long median = subarray[n / 2];
-            
-            // Calculate total operations
-            long long operations = 0;
-            for (long long val : subarray) {
-                operations += abs(val - median) / k;
+            // If subarray has only one element, no operations needed
+            if (l == r) {
+                result.push_back(0);
+                continue;
             }
             
-            result.push_back(operations);
+            // Convert to quotients: nums[i] = remainder + quotient[i] * k
+            vector<long long> quotients;
+            for (int i = l; i <= r; i++) {
+                quotients.push_back(nums[i] / k);
+            }
+            
+            // Find median of quotients to minimize total operations
+            sort(quotients.begin(), quotients.end());
+            long long median = quotients[quotients.size() / 2];
+            
+            // Calculate total operations
+            long long ops = 0;
+            for (long long q : quotients) {
+                ops += abs(q - median);
+            }
+            
+            result.push_back(ops);
         }
         
         return result;
