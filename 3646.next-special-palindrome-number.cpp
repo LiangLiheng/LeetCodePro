@@ -1,8 +1,3 @@
-#include <set>
-#include <vector>
-#include <algorithm>
-#include <string>
-
 #
 # @lc app=leetcode id=3646 lang=cpp
 #
@@ -12,70 +7,68 @@
 class Solution {
 public:
     long long specialPalindrome(long long n) {
-        std::set<long long> specialPalindromes;
+        vector<long long> specials;
         
-        // Try all subsets of digits 1-9
+        // Generate all valid special palindromes
+        // Try all subsets of {1,2,3,4,5,6,7,8,9}
         for (int mask = 1; mask < (1 << 9); mask++) {
-            std::vector<int> digits;
-            int totalLength = 0;
+            vector<int> digits;
             int oddCount = 0;
             
             for (int d = 1; d <= 9; d++) {
                 if (mask & (1 << (d - 1))) {
                     digits.push_back(d);
-                    totalLength += d;
                     if (d % 2 == 1) oddCount++;
                 }
             }
             
-            // Check if this subset can form a palindrome
+            // Can only form palindrome if at most one odd digit
             if (oddCount > 1) continue;
-            if (totalLength > 18) continue;
             
-            // Generate the smallest palindrome
-            std::string palindrome = generateSmallestPalindrome(digits, oddCount);
-            specialPalindromes.insert(std::stoll(palindrome));
+            // Construct the palindrome
+            string palin = constructPalindrome(digits);
+            if (!palin.empty()) {
+                specials.push_back(stoll(palin));
+            }
         }
         
-        // Find the smallest special palindrome > n
-        auto it = specialPalindromes.upper_bound(n);
-        return (it != specialPalindromes.end()) ? *it : n + 1;
+        sort(specials.begin(), specials.end());
+        
+        // Find first special > n
+        for (long long sp : specials) {
+            if (sp > n) return sp;
+        }
+        
+        return -1;
     }
     
 private:
-    std::string generateSmallestPalindrome(std::vector<int>& digits, int oddCount) {
-        std::vector<int> leftHalf;
-        int middle = -1;
+    string constructPalindrome(vector<int>& digits) {
+        string left = "";
+        string middle = "";
         
-        if (oddCount == 1) {
-            for (int d : digits) {
-                if (d % 2 == 1) {
-                    middle = d;
-                    for (int i = 0; i < (d - 1) / 2; i++)
-                        leftHalf.push_back(d);
-                } else {
-                    for (int i = 0; i < d / 2; i++)
-                        leftHalf.push_back(d);
+        for (int d : digits) {
+            if (d % 2 == 1) {
+                // Odd digit: one in middle, rest split
+                middle = string(1, '0' + d);
+                for (int i = 0; i < (d - 1) / 2; i++) {
+                    left += ('0' + d);
                 }
-            }
-        } else {
-            for (int d : digits) {
-                for (int i = 0; i < d / 2; i++)
-                    leftHalf.push_back(d);
+            } else {
+                // Even digit: split evenly
+                for (int i = 0; i < d / 2; i++) {
+                    left += ('0' + d);
+                }
             }
         }
         
-        std::sort(leftHalf.begin(), leftHalf.end());
+        // Sort left to get smallest palindrome
+        sort(left.begin(), left.end());
         
-        std::string result;
-        for (int d : leftHalf)
-            result += char('0' + d);
-        if (middle != -1)
-            result += char('0' + middle);
-        for (int i = leftHalf.size() - 1; i >= 0; i--)
-            result += char('0' + leftHalf[i]);
+        string right = left;
+        reverse(right.begin(), right.end());
         
-        return result;
+        return left + middle + right;
     }
 };
 # @lc code=end
