@@ -3,59 +3,46 @@
 #
 # [3310] Remove Methods From Project
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> remainingMethods(int n, int k, vector<vector<int>>& invocations) {
-        // Build adjacency list
-        vector<vector<int>> graph(n);
-        for (auto& inv : invocations) {
-            graph[inv[0]].push_back(inv[1]);
+        vector<vector<int>> adj(n);
+        for(const auto& inv : invocations) {
+            adj[inv[0]].push_back(inv[1]);
         }
-        
-        // Find all suspicious methods (reachable from k)
         vector<bool> suspicious(n, false);
         queue<int> q;
         q.push(k);
         suspicious[k] = true;
-        
-        while (!q.empty()) {
-            int curr = q.front();
-            q.pop();
-            for (int next : graph[curr]) {
-                if (!suspicious[next]) {
-                    suspicious[next] = true;
-                    q.push(next);
+        while(!q.empty()) {
+            int u = q.front(); q.pop();
+            for(int v : adj[u]) {
+                if(!suspicious[v]) {
+                    suspicious[v] = true;
+                    q.push(v);
                 }
             }
         }
-        
-        // Check if any non-suspicious method invokes a suspicious method
-        bool canRemove = true;
-        for (auto& inv : invocations) {
-            if (!suspicious[inv[0]] && suspicious[inv[1]]) {
-                canRemove = false;
+        bool can_remove = true;
+        for(const auto& inv : invocations) {
+            if(!suspicious[inv[0]] && suspicious[inv[1]]) {
+                can_remove = false;
                 break;
             }
         }
-        
-        // Build result
-        vector<int> result;
-        if (canRemove) {
-            // Return only non-suspicious methods
-            for (int i = 0; i < n; i++) {
-                if (!suspicious[i]) {
-                    result.push_back(i);
-                }
+        vector<int> res;
+        if(can_remove) {
+            for(int i = 0; i < n; ++i) {
+                if(!suspicious[i]) res.push_back(i);
             }
         } else {
-            // Return all methods
-            for (int i = 0; i < n; i++) {
-                result.push_back(i);
+            for(int i = 0; i < n; ++i) {
+                res.push_back(i);
             }
         }
-        
-        return result;
+        return res;
     }
 };
 # @lc code=end
