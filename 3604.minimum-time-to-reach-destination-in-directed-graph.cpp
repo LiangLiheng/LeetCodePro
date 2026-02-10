@@ -3,63 +3,42 @@
 #
 # [3604] Minimum Time to Reach Destination in Directed Graph
 #
+
 # @lc code=start
 class Solution {
 public:
     int minTime(int n, vector<vector<int>>& edges) {
-        // Build adjacency list: graph[u] = [[v, start, end], ...]
-        vector<vector<vector<int>>> graph(n);
-        for (auto& edge : edges) {
-            int u = edge[0], v = edge[1], start = edge[2], end = edge[3];
-            graph[u].push_back({v, start, end});
+        struct Edge {
+            int to, start, end;
+        };
+        vector<vector<Edge>> adj(n);
+        for (const auto& e : edges) {
+            adj[e[0]].push_back({e[1], e[2], e[3]});
         }
-        
-        // Dijkstra's algorithm with priority queue
-        vector<int> dist(n, INT_MAX); // minimum time to reach each node
-        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq; // (time, node)
-        
+        using ll = long long;
+        vector<ll> dist(n, LLONG_MAX / 2);
         dist[0] = 0;
+        using pli = pair<ll, int>;
+        priority_queue<pli, vector<pli>, greater<pli>> pq;
         pq.push({0, 0});
-        
         while (!pq.empty()) {
-            auto [time, node] = pq.top();
+            ll t = pq.top().first;
+            int u = pq.top().second;
             pq.pop();
-            
-            // If we reached the destination
-            if (node == n - 1) {
-                return time;
-            }
-            
-            // Skip if we've already found a better path to this node
-            if (time > dist[node]) {
-                continue;
-            }
-            
-            // Explore neighbors
-            for (auto& edge : graph[node]) {
-                int neighbor = edge[0];
-                int start = edge[1];
-                int end = edge[2];
-                
-                // If current time is beyond the edge's end time, skip
-                if (time > end) {
-                    continue;
-                }
-                
-                // Calculate departure time (wait if necessary)
-                int departureTime = max(time, start);
-                int arrivalTime = departureTime + 1;
-                
-                // Update if we found a better path
-                if (arrivalTime < dist[neighbor]) {
-                    dist[neighbor] = arrivalTime;
-                    pq.push({arrivalTime, neighbor});
+            if (t > dist[u]) continue;
+            for (const auto& ed : adj[u]) {
+                ll dep = max(t, (ll)ed.start);
+                if (dep <= ed.end) {
+                    ll arr = dep + 1;
+                    if (arr < dist[ed.to]) {
+                        dist[ed.to] = arr;
+                        pq.push({arr, ed.to});
+                    }
                 }
             }
         }
-        
-        // If we couldn't reach the destination
-        return dist[n - 1] == INT_MAX ? -1 : dist[n - 1];
+        ll res = dist[n - 1];
+        return res == LLONG_MAX / 2 ? -1 : (int)res;
     }
 };
 # @lc code=end
