@@ -10,16 +10,14 @@ public:
         int n = moveTime.size();
         int m = moveTime[0].size();
         
-        // Priority queue: {time, {row, col}}
-        priority_queue<pair<int, pair<int, int>>, 
-                      vector<pair<int, pair<int, int>>>,
-                      greater<pair<int, pair<int, int>>>> pq;
+        // Priority queue: (time, row, col)
+        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<>> pq;
         
-        // Distance array
+        // Distance array to track minimum time to reach each cell
         vector<vector<int>> dist(n, vector<int>(m, INT_MAX));
         
-        // Start from (0, 0) at time 0
-        pq.push({0, {0, 0}});
+        // Start at (0, 0) at time 0
+        pq.push({0, 0, 0});
         dist[0][0] = 0;
         
         // Directions: up, down, left, right
@@ -27,13 +25,10 @@ public:
         int dy[] = {0, 0, -1, 1};
         
         while (!pq.empty()) {
-            auto [time, pos] = pq.top();
+            auto [time, x, y] = pq.top();
             pq.pop();
             
-            int x = pos.first;
-            int y = pos.second;
-            
-            // If we reached the destination
+            // If we've reached the destination
             if (x == n - 1 && y == m - 1) {
                 return time;
             }
@@ -43,22 +38,20 @@ public:
                 continue;
             }
             
-            // Explore neighbors
+            // Try all 4 directions
             for (int i = 0; i < 4; i++) {
                 int nx = x + dx[i];
                 int ny = y + dy[i];
                 
                 // Check bounds
                 if (nx >= 0 && nx < n && ny >= 0 && ny < m) {
-                    // Calculate arrival time to (nx, ny)
-                    // We can start moving at max(current_time, moveTime[nx][ny])
-                    // And it takes 1 second to move
-                    int newTime = max(time, moveTime[nx][ny]) + 1;
+                    // Calculate arrival time at next cell
+                    int arrivalTime = max(time, moveTime[nx][ny]) + 1;
                     
-                    // Update if we found a better path
-                    if (newTime < dist[nx][ny]) {
-                        dist[nx][ny] = newTime;
-                        pq.push({newTime, {nx, ny}});
+                    // If we found a better path
+                    if (arrivalTime < dist[nx][ny]) {
+                        dist[nx][ny] = arrivalTime;
+                        pq.push({arrivalTime, nx, ny});
                     }
                 }
             }
