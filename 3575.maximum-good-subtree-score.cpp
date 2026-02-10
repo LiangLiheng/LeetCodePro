@@ -3,89 +3,80 @@
 #
 # [3575] Maximum Good Subtree Score
 #
+
 # @lc code=start
 class Solution {
 public:
     int goodSubtreeSum(vector<int>& vals, vector<int>& par) {
-        const int MOD = 1e9 + 7;
         int n = vals.size();
-        
-        // Build adjacency list
-        vector<vector<int>> children(n);
-        for (int i = 1; i < n; i++) {
-            children[par[i]].push_back(i);
+        vector<vector<int>> adj(n);
+        for (int i = 1; i < n; ++i) {
+            adj[par[i]].push_back(i);
         }
-        
-        // Get digit mask for a number (-1 if digit repeats within number)
-        auto getDigitMask = [](long long num) -> int {
-            int mask = 0;
-            while (num > 0) {
-                int digit = num % 10;
-                if (mask & (1 << digit)) {
-                    return -1;  // Digit repeats
-                }
-                mask |= (1 << digit);
-                num /= 10;
+        const long long MOD = 1000000007LL;
+        int MS = 1 << 10;
+        vector<vector<long long>> dp(n, vector<long long>(MS, -1LL));
+        long long total = 0;
+        auto get_mask = [](int val) -> pair<bool, int> {
+            string s = to_string(val);
+            int freq[10] = {0};
+            for (char c : s) {
+                int d = c - '0';
+                ++freq[d];
+                if (freq[d] > 1) return {false, 0};
             }
-            return mask;
+            int mask = 0;
+            for (int d = 0; d < 10; ++d) {
+                if (freq[d]) mask |= (1 << d);
+            }
+            return {true, mask};
         };
-        
-        long long totalSum = 0;
-        
-        // DFS returns map: digit_mask -> max_score for subtree rooted at u
-        function<map<int, long long>(int)> dfs = [&](int u) -> map<int, long long> {
-            map<int, long long> dp;
-            dp[0] = 0;  // Start with empty selection
-            
-            // Process each child
-            for (int child : children[u]) {
-                map<int, long long> childStates = dfs(child);
-                map<int, long long> newDp;
-                
-                // For each current state
-                for (auto [mask1, score1] : dp) {
-                    // Option 1: Don't select anything from this child
-                    newDp[mask1] = max(newDp[mask1], score1);
-                    
-                    // Option 2: Select something from this child
-                    for (auto [mask2, score2] : childStates) {
-                        if ((mask1 & mask2) == 0) {  // No digit conflict
-                            int newMask = mask1 | mask2;
-                            long long newScore = score1 + score2;
-                            newDp[newMask] = max(newDp[newMask], newScore);
+        function<void(int)> dfs = [&](int u) {
+            auto [can, own_mask] = get_mask(vals[u]);
+            long long ownv = vals[u];
+            vector<long long> comb(MS, -1LL);
+            comb[0] = 0;
+            for (int v : adj[u]) {
+                dfs(v);
+                vector<long long> new_comb(MS, -1LL);
+                for (int cm = 0; cm < MS; ++cm) {
+                    if (comb[cm] == -1LL) continue;
+                    for (int vm = 0; vm < MS; ++vm) {
+                        if (dp[v][vm] == -1LL) continue;
+                        if ((cm & vm) == 0) {
+                            int nm = cm | vm;
+                            new_comb[nm] = max(new_comb[nm], comb[cm] + dp[v][vm]);
                         }
                     }
                 }
-                
-                dp = move(newDp);
+                comb = std::move(new_comb);
             }
-            
-            // Try adding current node to each state
-            int nodeMask = getDigitMask(vals[u]);
-            if (nodeMask != -1) {
-                vector<pair<int, long long>> toAdd;
-                for (auto [mask, score] : dp) {
-                    if ((mask & nodeMask) == 0) {
-                        toAdd.push_back({mask | nodeMask, score + vals[u]});
+            vector<long long>& dpu = dp[u];
+            fill(dpu.begin(), dpu.end(), -1LL);
+            dpu[0] = 0;
+            for (int m = 0; m < MS; ++m) {
+                if (comb[m] != -1LL) {
+                    dpu[m] = max(dpu[m], comb[m]);
+                }
+            }
+            if (can) {
+                for (int cm = 0; cm < MS; ++cm) {
+                    if (comb[cm] != -1LL && (cm & own_mask) == 0) {
+                        int nm = cm | own_mask;
+                        dpu[nm] = max(dpu[nm], comb[cm] + ownv);
                     }
                 }
-                for (auto [newMask, newScore] : toAdd) {
-                    dp[newMask] = max(dp[newMask], newScore);
+            }
+            long long mx = 0;
+            for (int m = 0; m < MS; ++m) {
+                if (dpu[m] != -1LL) {
+                    mx = max(mx, dpu[m]);
                 }
             }
-            
-            // Calculate max score for this node's subtree
-            long long maxScore = 0;
-            for (auto [mask, score] : dp) {
-                maxScore = max(maxScore, score);
-            }
-            totalSum = (totalSum + maxScore) % MOD;
-            
-            return dp;
+            total = (total + mx) % MOD;
         };
-        
         dfs(0);
-        return (int)totalSum;
+        return static_cast<int>(total);
     }
 };
 # @lc code=end
