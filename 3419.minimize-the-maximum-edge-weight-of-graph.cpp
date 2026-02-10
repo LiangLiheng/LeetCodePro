@@ -3,88 +3,50 @@
 #
 # [3419] Minimize the Maximum Edge Weight of Graph
 #
+
 # @lc code=start
 class Solution {
 public:
     int minMaxWeight(int n, vector<vector<int>>& edges, int threshold) {
-        // Collect all unique weights and sort them
-        set<int> weight_set;
-        for (const auto& e : edges) {
-            weight_set.insert(e[2]);
-        }
-        vector<int> weights(weight_set.begin(), weight_set.end());
-        
-        // Binary search on the answer
-        int left = 0, right = weights.size() - 1;
-        int result = -1;
-        
-        while (left <= right) {
-            int mid = left + (right - left) / 2;
-            int maxWeight = weights[mid];
-            
-            if (canReach(n, edges, threshold, maxWeight)) {
-                result = maxWeight;
-                right = mid - 1;
-            } else {
-                left = mid + 1;
-            }
-        }
-        
-        return result;
-    }
-    
-private:
-    bool canReach(int n, const vector<vector<int>>& edges, int threshold, int maxWeight) {
-        // Build adjacency list with edges <= maxWeight
-        vector<vector<pair<int, int>>> adj(n);
-        
-        for (const auto& e : edges) {
-            int u = e[0], v = e[1], w = e[2];
-            if (w <= maxWeight) {
-                adj[u].push_back({v, w});
-            }
-        }
-        
-        // For each node, keep only threshold smallest weight edges
-        for (int u = 0; u < n; u++) {
-            if (adj[u].size() > threshold) {
-                sort(adj[u].begin(), adj[u].end(), 
-                     [](const pair<int,int>& a, const pair<int,int>& b) {
-                         return a.second < b.second;
-                     });
-                adj[u].resize(threshold);
-            }
-        }
-        
-        // Build reverse graph
-        vector<vector<int>> rev_adj(n);
-        for (int u = 0; u < n; u++) {
-            for (const auto& [v, w] : adj[u]) {
-                rev_adj[v].push_back(u);
-            }
-        }
-        
-        // BFS from node 0 in reverse graph
-        vector<bool> visited(n, false);
-        queue<int> q;
-        q.push(0);
-        visited[0] = true;
-        int count = 1;
-        
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            
-            for (int v : rev_adj[u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    q.push(v);
-                    count++;
+        auto check = [&](int x) -> bool {
+            vector<vector<int>> g(n);
+            for (const auto& e : edges) {
+                if (e[2] <= x) {
+                    g[e[1]].push_back(e[0]);
                 }
             }
+            vector<bool> vis(n, false);
+            queue<int> q;
+            q.push(0);
+            vis[0] = true;
+            int cnt = 1;
+            while (!q.empty()) {
+                int u = q.front(); q.pop();
+                for (int v : g[u]) {
+                    if (!vis[v]) {
+                        vis[v] = true;
+                        ++cnt;
+                        q.push(v);
+                    }
+                }
+            }
+            return cnt == n;
+        };
+        int l = 0, r = 0;
+        for (const auto& e : edges) {
+            r = max(r, e[2]);
         }
-        
-        return count == n;
+        int ans = -1;
+        while (l <= r) {
+            int mid = l + (r - l) / 2;
+            if (check(mid)) {
+                ans = mid;
+                r = mid - 1;
+            } else {
+                l = mid + 1;
+            }
+        }
+        return ans;
     }
 };
 # @lc code=end
