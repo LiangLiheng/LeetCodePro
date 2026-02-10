@@ -6,80 +6,64 @@
 # @lc code=start
 class Solution {
 public:
-    vector<int> parent;
-    
-    int find(int x) {
-        if (parent[x] != x) {
-            parent[x] = find(parent[x]);
-        }
-        return parent[x];
-    }
-    
-    void unite(int x, int y) {
-        int px = find(x);
-        int py = find(y);
-        if (px != py) {
-            parent[px] = py;
-        }
-    }
-    
     long long maxAlternatingSum(vector<int>& nums, vector<vector<int>>& swaps) {
         int n = nums.size();
-        parent.resize(n);
-        for (int i = 0; i < n; i++) {
-            parent[i] = i;
-        }
         
-        // Build union-find structure
+        // Union-Find to identify connected components
+        vector<int> parent(n);
+        iota(parent.begin(), parent.end(), 0);
+        
+        function<int(int)> find = [&](int x) {
+            return parent[x] == x ? x : parent[x] = find(parent[x]);
+        };
+        
+        auto unite = [&](int x, int y) {
+            x = find(x);
+            y = find(y);
+            if (x != y) {
+                parent[x] = y;
+            }
+        };
+        
+        // Build connected components from swaps
         for (auto& swap : swaps) {
             unite(swap[0], swap[1]);
         }
         
-        // Group indices by component
+        // Group indices by their root component
         unordered_map<int, vector<int>> components;
         for (int i = 0; i < n; i++) {
             components[find(i)].push_back(i);
         }
         
-        // For each component, assign values optimally
-        vector<int> result(n);
+        long long sum = 0;
+        
+        // For each component, optimize the alternating sum contribution
         for (auto& [root, indices] : components) {
-            // Get values for this component
+            // Collect all values in this component
             vector<int> values;
             for (int idx : indices) {
                 values.push_back(nums[idx]);
             }
             
-            // Sort values in descending order
-            sort(values.begin(), values.end(), greater<int>());
+            // Sort values in ascending order
+            sort(values.begin(), values.end());
             
-            // Separate indices into even and odd
-            vector<int> even_indices, odd_indices;
+            // Count even and odd position indices
+            int evenCount = 0, oddCount = 0;
             for (int idx : indices) {
-                if (idx % 2 == 0) {
-                    even_indices.push_back(idx);
-                } else {
-                    odd_indices.push_back(idx);
-                }
+                if (idx % 2 == 0) evenCount++;
+                else oddCount++;
             }
             
-            // Assign largest values to even indices, smallest to odd
-            int val_idx = 0;
-            for (int idx : even_indices) {
-                result[idx] = values[val_idx++];
+            // Assign largest evenCount values to even positions (contribute +)
+            for (int i = values.size() - evenCount; i < values.size(); i++) {
+                sum += values[i];
             }
-            for (int idx : odd_indices) {
-                result[idx] = values[val_idx++];
-            }
-        }
-        
-        // Calculate alternating sum
-        long long sum = 0;
-        for (int i = 0; i < n; i++) {
-            if (i % 2 == 0) {
-                sum += result[i];
-            } else {
-                sum -= result[i];
+            
+            // Assign smallest oddCount values to odd positions (contribute -)
+            for (int i = 0; i < oddCount; i++) {
+                sum -= values[i];
             }
         }
         
