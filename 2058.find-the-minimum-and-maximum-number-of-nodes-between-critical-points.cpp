@@ -3,7 +3,6 @@
 #
 # [2058] Find the Minimum and Maximum Number of Nodes Between Critical Points
 #
-
 # @lc code=start
 /**
  * Definition for singly-linked list.
@@ -18,30 +17,41 @@
 class Solution {
 public:
     vector<int> nodesBetweenCriticalPoints(ListNode* head) {
-        vector<int> crit;
-        if (!head || !head->next) return {-1, -1};
-        ListNode* p = head;
-        ListNode* c = head->next;
-        int pos = 2;
-        while (c->next) {
-            ListNode* n = c->next;
-            if ((c->val > p->val && c->val > n->val) || 
-                (c->val < p->val && c->val < n->val)) {
-                crit.push_back(pos);
-            }
-            p = c;
-            c = n;
-            ++pos;
-        }
-        if (crit.size() < 2) {
+        if (!head || !head->next) {
             return {-1, -1};
         }
-        int min_dist = crit[1] - crit[0];
-        int max_dist = crit.back() - crit[0];
-        for (size_t i = 2; i < crit.size(); ++i) {
-            min_dist = min(min_dist, crit[i] - crit[i - 1]);
+        ListNode* prev_node = head;
+        ListNode* curr_node = head->next;
+        int index = 2;
+        int first = -1;
+        int last_crit = -1;
+        int prev_crit = -1;
+        int min_distance = 100000001;
+        while (curr_node->next != nullptr) {
+            ListNode* next_node = curr_node->next;
+            bool is_critical = (curr_node->val > prev_node->val && curr_node->val > next_node->val) ||
+                               (curr_node->val < prev_node->val && curr_node->val < next_node->val);
+            if (is_critical) {
+                if (first == -1) {
+                    first = index;
+                }
+                if (prev_crit != -1) {
+                    int dist = index - prev_crit;
+                    if (dist < min_distance) {
+                        min_distance = dist;
+                    }
+                }
+                prev_crit = index;
+                last_crit = index;
+            }
+            prev_node = curr_node;
+            curr_node = next_node;
+            ++index;
         }
-        return {min_dist, max_dist};
+        if (first == -1 || min_distance == 100000001) {
+            return {-1, -1};
+        }
+        return {min_distance, last_crit - first};
     }
 };
 # @lc code=end
