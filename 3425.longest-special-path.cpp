@@ -3,71 +3,60 @@
 #
 # [3425] Longest Special Path
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> longestSpecialPath(vector<vector<int>>& edges, vector<int>& nums) {
         int n = nums.size();
-        
-        // Build adjacency list
-        vector<vector<pair<int, int>>> adj(n);
-        for (auto& e : edges) {
-            adj[e[0]].push_back({e[1], e[2]});
-            adj[e[1]].push_back({e[0], e[2]});
+        vector<vector<pair<int,int>>> adj(n);
+        for(const auto& e : edges) {
+            int u = e[0], v = e[1], len = e[2];
+            adj[u].emplace_back(v, len);
+            adj[v].emplace_back(u, len);
         }
-        
-        long long maxLen = 0;
-        int minNodes = 1;
-        
-        // DFS to find longest special path
-        unordered_map<int, int> valToIdx;
-        vector<long long> cumulativeLen;
-        
-        function<void(int, int, long long)> dfs = [&](int u, int parent, long long distFromRoot) {
+        long long max_len = 0;
+        int min_nodes_cnt = 1;
+        vector<long long> path_dist;
+        unordered_map<int, int> last_seen;
+        int window_left = 0;
+        auto dfs = [&](auto&& self, int u, int par, long long cur_dist, int cur_dep) -> void {
             int val = nums[u];
-            
-            // Find start index of valid path (after last occurrence of this value)
-            int startIdx = 0;
-            if (valToIdx.count(val)) {
-                startIdx = valToIdx[val] + 1;
+            int old_window = window_left;
+            auto it = last_seen.find(val);
+            bool existed = (it != last_seen.end());
+            int prev_dep = existed ? it->second : -1;
+            if (existed && prev_dep >= window_left) {
+                window_left = prev_dep + 1;
             }
-            
-            // Add current node
-            int curIdx = cumulativeLen.size();
-            cumulativeLen.push_back(distFromRoot);
-            int prevIdx = valToIdx.count(val) ? valToIdx[val] : -1;
-            valToIdx[val] = curIdx;
-            
-            // Calculate path length and node count
-            long long startLen = (startIdx > 0) ? cumulativeLen[startIdx - 1] : 0;
-            long long pathLen = distFromRoot - startLen;
-            int nodeCount = curIdx - startIdx + 1;
-            
-            // Update result
-            if (pathLen > maxLen || (pathLen == maxLen && nodeCount < minNodes)) {
-                maxLen = pathLen;
-                minNodes = nodeCount;
+            int old_dep_val = prev_dep;
+            last_seen[val] = cur_dep;
+            path_dist.push_back(cur_dist);
+            int suf_nodes = cur_dep - window_left + 1;
+            long long suf_len = path_dist[cur_dep] - path_dist[window_left];
+            if (suf_len > max_len) {
+                max_len = suf_len;
+                min_nodes_cnt = suf_nodes;
+            } else if (suf_len == max_len) {
+                min_nodes_cnt = std::min(min_nodes_cnt, suf_nodes);
             }
-            
-            // Process children
-            for (auto [v, w] : adj[u]) {
-                if (v != parent) {
-                    dfs(v, u, distFromRoot + w);
+            for (const auto& p : adj[u]) {
+                int v = p.first;
+                int w = p.second;
+                if (v != par) {
+                    self(self, v, u, cur_dist + w, cur_dep + 1);
                 }
             }
-            
-            // Backtrack
-            cumulativeLen.pop_back();
-            if (prevIdx >= 0) {
-                valToIdx[val] = prevIdx;
+            path_dist.pop_back();
+            if (existed) {
+                last_seen[val] = old_dep_val;
             } else {
-                valToIdx.erase(val);
+                last_seen.erase(val);
             }
+            window_left = old_window;
         };
-        
-        dfs(0, -1, 0);
-        
-        return {(int)maxLen, minNodes};
+        dfs(dfs, 0, -1, 0LL, 0);
+        return {(int)max_len, min_nodes_cnt};
     }
 };
 # @lc code=end
