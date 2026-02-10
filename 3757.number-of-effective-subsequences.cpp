@@ -1,14 +1,73 @@
-YOUR TASK: Solve the given coding problem.
-
-OUTPUT FORMAT (mandatory): JSON object with exactly two fields:
-- "reasoning": Natural language explanation of your algorithmic approach
-- "result": Complete, executable code in the specified language
-
-FORBIDDEN in output: Step-by-step guides, TODO comments, placeholder text, generic problem-solving frameworks, instructional content, anything resembling these guidance rules.
-
-BEFORE SUBMITTING - VERIFICATION:
-1. Does "result" field contain actual code that would compile/run?
-2. Is there ANY text in "result" like "Step 1", "Phase", "[implement this]", "TODO"? If YES → FAIL
-3. Could you copy "result" directly into a code editor and execute it? If NO → FAIL
-
-REQUIRED: Your "reasoning" must explain the SPECIFIC algorithm you implemented (not generic problem-solving steps). Your "result" must be complete executable code (not guidance about what to code).
+#
+# @lc app=leetcode id=3757 lang=cpp
+#
+# [3757] Number of Effective Subsequences
+#
+# @lc code=start
+class Solution {
+public:
+    int countEffective(vector<int>& nums) {
+        const int MOD = 1e9 + 7;
+        
+        // Count frequency of each value
+        map<int, int> freq;
+        for (int num : nums) {
+            freq[num]++;
+        }
+        
+        // Calculate total OR
+        int total_or = 0;
+        for (auto& [val, cnt] : freq) {
+            total_or |= val;
+        }
+        
+        // Extract unique values and counts
+        vector<pair<int, int>> items;
+        for (auto& [val, cnt] : freq) {
+            items.push_back({val, cnt});
+        }
+        
+        int m = items.size();
+        
+        // Precompute powers of 2
+        int max_cnt = 0;
+        for (auto& [val, cnt] : items) {
+            max_cnt = max(max_cnt, cnt);
+        }
+        vector<long long> pow2(max_cnt + 1);
+        pow2[0] = 1;
+        for (int i = 1; i <= max_cnt; i++) {
+            pow2[i] = (pow2[i-1] * 2) % MOD;
+        }
+        
+        // DP: dp[or_value] = number of ways to achieve this OR value
+        unordered_map<int, long long> dp;
+        dp[0] = 1;
+        
+        for (int i = 0; i < m; i++) {
+            int val = items[i].first;
+            int cnt = items[i].second;
+            long long keep_ways = (pow2[cnt] - 1 + MOD) % MOD;
+            
+            unordered_map<int, long long> new_dp;
+            for (auto& [or_val, ways] : dp) {
+                // Remove all elements of this value
+                new_dp[or_val] = (new_dp[or_val] + ways) % MOD;
+                // Keep at least one element of this value
+                new_dp[or_val | val] = (new_dp[or_val | val] + ways * keep_ways) % MOD;
+            }
+            dp = new_dp;
+        }
+        
+        // Count effective subsequences (OR < total_or)
+        long long result = 0;
+        for (auto& [or_val, ways] : dp) {
+            if (or_val < total_or) {
+                result = (result + ways) % MOD;
+            }
+        }
+        
+        return result;
+    }
+};
+# @lc code=end
