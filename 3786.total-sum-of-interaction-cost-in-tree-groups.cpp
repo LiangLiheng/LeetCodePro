@@ -7,43 +7,46 @@
 class Solution {
 public:
     long long interactionCosts(int n, vector<vector<int>>& edges, vector<int>& group) {
-        if (n == 1) return 0;
-        
         // Build adjacency list
         vector<vector<int>> adj(n);
-        for (auto& e : edges) {
-            adj[e[0]].push_back(e[1]);
-            adj[e[1]].push_back(e[0]);
+        for (auto& edge : edges) {
+            adj[edge[0]].push_back(edge[1]);
+            adj[edge[1]].push_back(edge[0]);
         }
         
-        // Count total nodes in each group
-        unordered_map<int, int> total_count;
+        // Count total nodes of each group
+        vector<int> totalCount(21, 0);
         for (int g : group) {
-            total_count[g]++;
+            totalCount[g]++;
         }
         
         long long result = 0;
         
-        // DFS to compute subtree counts and contributions
-        function<unordered_map<int, int>(int, int)> dfs = [&](int node, int parent) -> unordered_map<int, int> {
-            unordered_map<int, int> subtree_count;
-            subtree_count[group[node]] = 1;
+        // DFS to calculate contribution of each edge
+        function<vector<int>(int, int)> dfs = [&](int node, int parent) -> vector<int> {
+            // Count nodes of each group in subtree rooted at node
+            vector<int> count(21, 0);
+            count[group[node]]++;
             
             for (int child : adj[node]) {
-                if (child != parent) {
-                    auto child_count = dfs(child, node);
-                    
-                    // Calculate contribution of edge (node, child)
-                    for (auto& [g, cnt] : child_count) {
-                        int other_side = total_count[g] - cnt;
-                        result += (long long)cnt * other_side;
-                        // Merge child counts into current node
-                        subtree_count[g] += cnt;
-                    }
+                if (child == parent) continue;
+                
+                vector<int> childCount = dfs(child, node);
+                
+                // Calculate contribution of edge (node, child)
+                for (int g = 1; g <= 20; g++) {
+                    long long inChild = childCount[g];
+                    long long notInChild = totalCount[g] - childCount[g];
+                    result += inChild * notInChild;
+                }
+                
+                // Merge childCount into count
+                for (int g = 1; g <= 20; g++) {
+                    count[g] += childCount[g];
                 }
             }
             
-            return subtree_count;
+            return count;
         };
         
         dfs(0, -1);
