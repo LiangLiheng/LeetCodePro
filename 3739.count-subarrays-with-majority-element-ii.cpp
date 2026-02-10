@@ -7,19 +7,22 @@
 class Solution {
 public:
     long long countMajoritySubarrays(vector<int>& nums, int target) {
+        int n = nums.size();
         long long count = 0;
-        unordered_map<int, int> balanceFreq;
-        balanceFreq[0] = 1;
-        int balance = 0;
         
-        for (int num : nums) {
-            balance += (num == target) ? 1 : -1;
-            for (auto& [prevBalance, freq] : balanceFreq) {
-                if (prevBalance < balance) {
-                    count += freq;
+        for (int i = 0; i < n; i++) {
+            int targetCount = 0;
+            for (int j = i; j < n; j++) {
+                if (nums[j] == target) {
+                    targetCount++;
+                }
+                int length = j - i + 1;
+                // Target is majority if targetCount > length/2
+                // Which is equivalent to targetCount * 2 > length
+                if (targetCount * 2 > length) {
+                    count++;
                 }
             }
-            balanceFreq[balance]++;
         }
         
         return count;
