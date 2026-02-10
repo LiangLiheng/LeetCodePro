@@ -9,13 +9,13 @@ public:
     int minOperations(vector<int>& nums) {
         int operations = 0;
         int start = 0;
+        int n = nums.size();
         
-        while (start < nums.size()) {
-            // Check if remaining elements (from start onwards) are all distinct
+        while (start < n) {
+            // Check if remaining elements are all distinct
             unordered_set<int> seen;
             bool hasDuplicate = false;
-            
-            for (int i = start; i < nums.size(); i++) {
+            for (int i = start; i < n; i++) {
                 if (seen.count(nums[i])) {
                     hasDuplicate = true;
                     break;
@@ -24,10 +24,10 @@ public:
             }
             
             if (!hasDuplicate) {
-                break;  // All remaining elements are distinct
+                break;
             }
             
-            // Perform one operation: remove first 3 elements
+            // Remove first 3 elements (or all remaining if < 3)
             start += 3;
             operations++;
         }
