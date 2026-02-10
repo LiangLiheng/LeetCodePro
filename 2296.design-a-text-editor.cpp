@@ -3,57 +3,62 @@
 #
 # [2296] Design a Text Editor
 #
+
 # @lc code=start
 class TextEditor {
 public:
-    TextEditor() {
-
-    }
+    TextEditor() {}
 
     void addText(string text) {
         for (char c : text) {
-            left_.push_back(c);
+            left.push_back(c);
         }
     }
 
     int deleteText(int k) {
         int deleted = 0;
-        while (deleted < k && !left_.empty()) {
-            left_.pop_back();
+        for (int i = 0; i < k; ++i) {
+            if (left.empty()) {
+                break;
+            }
+            left.pop_back();
             ++deleted;
         }
         return deleted;
     }
 
     string cursorLeft(int k) {
-        while (k > 0 && !left_.empty()) {
-            right_.push_front(left_.back());
-            left_.pop_back();
-            --k;
+        int steps = std::min(k, (int)left.size());
+        for (int i = 0; i < steps; ++i) {
+            right.push_front(left.back());
+            left.pop_back();
         }
         return getScreen();
     }
 
     string cursorRight(int k) {
-        while (k > 0 && !right_.empty()) {
-            left_.push_back(right_.front());
-            right_.pop_front();
-            --k;
+        int steps = std::min(k, (int)right.size());
+        for (int i = 0; i < steps; ++i) {
+            left.push_back(right.front());
+            right.pop_front();
         }
         return getScreen();
     }
 
 private:
-    std::deque<char> left_;
-    std::deque<char> right_;
+    std::deque<char> left;
+    std::deque<char> right;
 
-    string getScreen() {
-        size_t len = left_.size();
-        if (len <= 10) {
-            return string(left_.begin(), left_.end());
-        } else {
-            return string(left_.begin() + len - 10, left_.end());
+    std::string getScreen() const {
+        size_t n = left.size();
+        if (n == 0) return "";
+        size_t start = (n > 10 ? n - 10 : 0);
+        std::string screen;
+        screen.reserve(10);
+        for (size_t i = start; i < n; ++i) {
+            screen += left[i];
         }
+        return screen;
     }
 };
 
