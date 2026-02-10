@@ -10,19 +10,21 @@ public:
         int n = nums.size();
         long long count = 0;
         
+        map<long long, int> prefixCount;
+        prefixCount[0] = 1;
+        
+        long long prefixSum = 0;
+        
         for (int i = 0; i < n; i++) {
-            int targetCount = 0;
-            for (int j = i; j < n; j++) {
-                if (nums[j] == target) {
-                    targetCount++;
-                }
-                int length = j - i + 1;
-                // Target is majority if targetCount > length/2
-                // Which is equivalent to targetCount * 2 > length
-                if (targetCount * 2 > length) {
-                    count++;
-                }
+            prefixSum += (nums[i] == target) ? 1 : -1;
+            
+            // Count all prefixes with sum < prefixSum
+            auto it = prefixCount.lower_bound(prefixSum);
+            for (auto iter = prefixCount.begin(); iter != it; ++iter) {
+                count += iter->second;
             }
+            
+            prefixCount[prefixSum]++;
         }
         
         return count;
