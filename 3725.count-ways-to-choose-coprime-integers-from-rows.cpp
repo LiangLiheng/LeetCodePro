@@ -8,31 +8,35 @@ class Solution {
 public:
     int countCoprime(vector<vector<int>>& mat) {
         const int MOD = 1e9 + 7;
-        int m = mat.size();
+        const int MAX_VAL = 150;
         
-        // dp[g] = number of ways to achieve GCD = g
-        unordered_map<int, long long> dp;
-        
-        // Initialize with first row
-        for (int val : mat[0]) {
-            dp[val]++;
-        }
-        
-        // Process remaining rows
-        for (int i = 1; i < m; i++) {
-            unordered_map<int, long long> ndp;
-            
-            for (auto& [g, cnt] : dp) {
-                for (int val : mat[i]) {
-                    int new_g = __gcd(g, val);
-                    ndp[new_g] = (ndp[new_g] + cnt) % MOD;
-                }
+        // Precompute Möbius function using inclusion-exclusion
+        vector<int> mu(MAX_VAL + 1);
+        mu[1] = 1;
+        for (int i = 1; i <= MAX_VAL; i++) {
+            for (int j = 2 * i; j <= MAX_VAL; j += i) {
+                mu[j] -= mu[i];
             }
-            
-            dp = move(ndp);
         }
         
-        return dp[1];
+        // For each divisor d, count ways to choose elements all divisible by d
+        long long result = 0;
+        for (int d = 1; d <= MAX_VAL; d++) {
+            long long ways = 1;
+            for (const auto& row : mat) {
+                int count = 0;
+                for (int val : row) {
+                    if (val % d == 0) {
+                        count++;
+                    }
+                }
+                ways = (ways * count) % MOD;
+            }
+            // Apply Möbius inversion
+            result = (result + (long long)mu[d] * ways % MOD + MOD) % MOD;
+        }
+        
+        return result;
     }
 };
 # @lc code=end
