@@ -6,84 +6,88 @@
 # @lc code=start
 class Solution {
 public:
-    const int MOD = 1e9 + 7;
-    map<tuple<int, int, bool, bool>, long long> memo;
-    vector<int> digits;
-    int base;
-    
-    vector<int> toBase(string num, int b) {
-        if (num == "0") return {0};
-        vector<int> result;
-        while (num != "0") {
-            int remainder = 0;
-            string newNum = "";
-            for (char c : num) {
-                int current = remainder * 10 + (c - '0');
-                if (!newNum.empty() || current / b > 0) {
-                    newNum += to_string(current / b);
-                }
-                remainder = current % b;
-            }
-            result.push_back(remainder);
-            num = newNum.empty() ? "0" : newNum;
-        }
-        reverse(result.begin(), result.end());
-        return result;
-    }
-    
-    long long solve(int pos, int prevDigit, bool tight, bool started) {
-        if (pos == digits.size()) {
-            return started ? 1 : 0;
-        }
-        
-        auto key = make_tuple(pos, prevDigit, tight, started);
-        if (memo.count(key)) {
-            return memo[key];
-        }
-        
-        int limit = tight ? digits[pos] : base - 1;
-        long long result = 0;
-        
-        for (int digit = 0; digit <= limit; digit++) {
-            if (started && digit < prevDigit) {
-                continue;
-            }
-            
-            bool newStarted = started || (digit > 0);
-            int newPrevDigit = newStarted ? digit : 0;
-            bool newTight = tight && (digit == limit);
-            
-            result = (result + solve(pos + 1, newPrevDigit, newTight, newStarted)) % MOD;
-        }
-        
-        return memo[key] = result;
-    }
-    
-    long long countUpTo(string num, int b) {
-        base = b;
-        digits = toBase(num, b);
-        memo.clear();
-        return solve(0, 0, true, false);
-    }
-    
-    string subtract1(string num) {
-        int n = num.size();
-        for (int i = n - 1; i >= 0; i--) {
-            if (num[i] > '0') {
-                num[i]--;
-                break;
-            }
-            num[i] = '9';
-        }
-        size_t i = 0;
-        while (i < num.size() && num[i] == '0') i++;
-        return i == num.size() ? "0" : num.substr(i);
-    }
-    
     int countNumbers(string l, string r, int b) {
-        long long countR = countUpTo(r, b);
+        const int MOD = 1e9 + 7;
+        
+        // Convert decimal string to base b digits
+        auto toBase = [&](string num) {
+            vector<int> result;
+            while (!num.empty() && num != "0") {
+                int remainder = 0;
+                string next = "";
+                for (char c : num) {
+                    int digit = remainder * 10 + (c - '0');
+                    if (!next.empty() || digit / b > 0) {
+                        next += char('0' + digit / b);
+                    }
+                    remainder = digit % b;
+                }
+                result.push_back(remainder);
+                num = next;
+            }
+            if (result.empty()) result.push_back(0);
+            reverse(result.begin(), result.end());
+            return result;
+        };
+        
+        // Digit DP to count numbers with non-decreasing digits
+        auto countUpTo = [&](vector<int>& digits) -> long long {
+            int n = digits.size();
+            map<tuple<int, int, bool, bool>, long long> memo;
+            
+            function<long long(int, int, bool, bool)> dp = [&](int pos, int prev, bool tight, bool started) -> long long {
+                if (pos == n) {
+                    return started ? 1 : 0;
+                }
+                
+                auto key = make_tuple(pos, prev, tight, started);
+                if (memo.count(key)) return memo[key];
+                
+                int limit = tight ? digits[pos] : (b - 1);
+                long long res = 0;
+                
+                for (int d = 0; d <= limit; d++) {
+                    if (started && d < prev) continue;
+                    
+                    bool newStarted = started || (d > 0);
+                    bool newTight = tight && (d == limit);
+                    int newPrev = newStarted ? d : 0;
+                    
+                    res = (res + dp(pos + 1, newPrev, newTight, newStarted)) % MOD;
+                }
+                
+                return memo[key] = res;
+            };
+            
+            return dp(0, 0, true, false);
+        };
+        
+        // Subtract 1 from string
+        auto subtract1 = [](string num) -> string {
+            int i = num.size() - 1;
+            while (i >= 0 && num[i] == '0') {
+                num[i] = '9';
+                i--;
+            }
+            if (i >= 0) {
+                num[i]--;
+            }
+            size_t start = num.find_first_not_of('0');
+            if (start == string::npos) return "0";
+            return num.substr(start);
+        };
+        
+        // Count for r
+        vector<int> rDigits = toBase(r);
+        long long countR = countUpTo(rDigits);
+        
+        // Count for l-1
         string lMinus1 = subtract1(l);
-        long long countL = countUpTo(lMinus1, b);
+        long long countL = 0;
+        if (lMinus1 != "0") {
+            vector<int> lDigits = toBase(lMinus1);
+            countL = countUpTo(lDigits);
+        }
         
         return (countR - countL + MOD) % MOD;
     }
