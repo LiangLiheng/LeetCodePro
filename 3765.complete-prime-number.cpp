@@ -3,41 +3,30 @@
 #
 # [3765] Complete Prime Number
 #
+
 # @lc code=start
 class Solution {
 public:
-    bool isPrime(int n) {
-        if (n <= 1) return false;
-        if (n == 2) return true;
-        if (n % 2 == 0) return false;
-        for (int i = 3; i * i <= n; i += 2) {
-            if (n % i == 0) return false;
-        }
-        return true;
-    }
-    
     bool completePrime(int num) {
-        string s = to_string(num);
-        int n = s.length();
-        
-        // Check all prefixes
-        for (int i = 1; i <= n; i++) {
-            string prefix = s.substr(0, i);
-            int prefixNum = stoi(prefix);
-            if (!isPrime(prefixNum)) {
-                return false;
+        auto is_prime = [&](long long x) -> bool {
+            if (x <= 1) return false;
+            if (x == 2 || x == 3) return true;
+            if (x % 2 == 0 || x % 3 == 0) return false;
+            for (long long i = 5; i * i <= x; i += 6) {
+                if (x % i == 0 || x % (i + 2) == 0) return false;
             }
+            return true;
+        };
+        std::string s = std::to_string(num);
+        int n = s.size();
+        for (int len = 1; len <= n; ++len) {
+            // prefix
+            long long pre = std::stoll(s.substr(0, len));
+            if (!is_prime(pre)) return false;
+            // suffix
+            long long suf = std::stoll(s.substr(n - len, len));
+            if (!is_prime(suf)) return false;
         }
-        
-        // Check all suffixes
-        for (int i = 1; i <= n; i++) {
-            string suffix = s.substr(n - i, i);
-            int suffixNum = stoi(suffix);
-            if (!isPrime(suffixNum)) {
-                return false;
-            }
-        }
-        
         return true;
     }
 };
