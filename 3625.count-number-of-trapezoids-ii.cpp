@@ -1,3 +1,68 @@
-{
-    "reasoning": "Step 1: Problem Decomposition\n- Input: Array of 2D points, all distinct\n- Output: Count of unique trapezoids (convex quadrilaterals with ≥1 pair of parallel sides)\n- Key insight: Brute force all C(n,4) combinations is feasible since n ≤ 500\n\nStep 2: Core Challenges\n- Challenge 1: Given 4 arbitrary points, determine if they can form a convex quadrilateral\n- Challenge 2: If convex, check if at least one pair of opposite sides is parallel\n- Challenge 3: Order the 4 points correctly to form a simple quadrilateral (vertices traversed in cyclic order)\n\nStep 3: Algorithm Design\n- Iterate through all combinations of 4 points\n- For each combination: (a) Try all valid orderings, (b) For each ordering, verify it forms simple quadrilateral, (c) Verify convexity, (d) Check for parallel opposite sides\n- Parallel detection: Use cross product to avoid floating point division (dx1*dy2 == dy1*dx2)\n- Convexity check: Cross products at all vertices must have consistent sign\n\nStep 4: Critical Point - Multiple Orderings REQUIRED\n- For 4 points, there are 3 distinct ways to connect them as quadrilateral vertices\n- Problem: Single ordering method (e.g., centroid-based angle sort) cannot guarantee correct ordering for all point configurations\n- Consequence: If wrong ordering is chosen, algorithm will miss valid trapezoids or incorrectly classify non-trapezoids\n- REQUIRED ACTION: Algorithm MUST try all 3 possible orderings and accept any that form valid trapezoids\n- The 3 orderings correspond to the 3 ways to pair points into opposite sides: (p0,p1,p2,p3), (p0,p2,p1,p3), (p0,p1,p3,p2)\n\nStep 5: Validation Checkpoint - Simple Quadrilateral\n- Pattern: Before checking properties of constructed object, verify object is well-formed\n- REQUIRED: After ordering points, verify the ordering produces a simple (non-self-intersecting) quadrilateral\n- Method: Check that no two edges intersect (except at shared vertices)\n- If ordering fails this check, it is invalid - try next ordering\n- Only proceed to convexity check if quadrilateral is simple\n\nStep 6: Logic Verification - Parallel Sides\n- In ordered quadrilateral [p0, p1, p2, p3], sides are: p0→p1, p1→p2, p2→p3, p3→p0\n- Opposite pairs: (p0→p1, p2→p3) and (p1→p2, p3→p0)\n- Confirm: These are the only pairs to check (adjacent sides share vertex, can't be parallel without being collinear)\n- Trapezoid requires: At least ONE pair of opposite sides parallel\n\nStep 7: Edge Case Analysis\n- Collinear points: Cross product = 0, should be handled as non-convex\n- Degenerate quadrilateral: Three collinear points, should fail convexity check\n- Numerical precision: Integer coordinates in [-1000, 1000] require long long for cross products to avoid overflow\n- All orderings invalid: If all 3 orderings produce self-intersecting quadrilaterals, these 4 points cannot form trapezoid\n\nStep 8: Example Walkthrough\n- Example 1: 5 points → C(5,4) = 5 possible 4-point sets\n- Expected: 2 trapezoids\n- For each 4-point set: (1) Try all 3 orderings, (2) For valid orderings, check simple quadrilateral, (3) Check convexity, (4) Verify parallel opposite sides\n- Verify both mentioned trapezoids found through at least one valid ordering\n- Verify remaining 3 combinations fail all checks\n\nStep 9: Complexity Validation\n- Time: O(n^4) for combinations × O(1) for 3 orderings × O(1) per check = O(n^4)\n- For n=500: ~62.5M operations → acceptable\n- Space: O(1) auxiliary",
-    "result": "#\n# @lc app=leetcode id=3625 lang=cpp\n#\n# [3625] Count Number of Trapezoids II\n#\n# @lc code=start\nclass Solution {\npublic:\n    int countTrapezoids(vector<vector<int>>& points) {\n        int n = points.size();\n        int count = 0;\n        \n        // Try all combinations of 4 points\n        for (int i = 0; i < n; i++) {\n            for (int j = i + 1; j < n; j++) {\n                for (int k = j + 1; k < n; k++) {\n                    for (int l = k + 1; l < n; l++) {\n                        if (isTrapezoid(points[i], points[j], points[k], points[l])) {\n                            count++;\n                        }\n                    }\n                }\n            }\n        }\n        \n        return count;\n    }\n    \nprivate:\n    bool isTrapezoid(vector<int> p0, vector<int> p1, vector<int> p2, vector<int> p3) {\n        // Try all 3 possible orderings of the 4 points\n        vector<vector<vector<int>>> orderings = {\n            {p0, p1, p2, p3},  // First ordering\n            {p0, p2, p1, p3},  // Second ordering\n            {p0, p1, p3, p2}   // Third ordering\n        };\n        \n        for (auto& pts : orderings) {\n            // Check if this ordering forms a simple (non-self-intersecting) quadrilateral\n            if (!isSimpleQuadrilateral(pts)) {\n                continue;\n            }\n            \n            // Check if it's convex\n            if (!isConvex(pts)) {\n                continue;\n            }\n            \n            // Check if at least one pair of opposite sides is parallel\n            if (hasParallelSides(pts)) {\n                return true;\n            }\n        }\n        \n        return false;\n    }\n    \n    bool isSimpleQuadrilateral(const vector<vector<int>>& pts) {\n        // Check that edges don't intersect (except at shared vertices)\n        // Edges are: (0,1), (1,2), (2,3), (3,0)\n        // Check if (0,1) intersects (2,3)\n        if (segmentsIntersect(pts[0], pts[1], pts[2], pts[3])) {\n            return false;\n        }\n        // Check if (1,2) intersects (3,0)\n        if (segmentsIntersect(pts[1], pts[2], pts[3], pts[0])) {\n            return false;\n        }\n        return true;\n    }\n    \n    bool segmentsIntersect(const vector<int>& p1, const vector<int>& p2,\n                          const vector<int>& p3, const vector<int>& p4) {\n        // Check if line segment p1-p2 intersects with p3-p4\n        long long d1 = crossProduct(p3, p4, p1);\n        long long d2 = crossProduct(p3, p4, p2);\n        long long d3 = crossProduct(p1, p2, p3);\n        long long d4 = crossProduct(p1, p2, p4);\n        \n        if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&\n            ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {\n            return true;\n        }\n        return false;\n    }\n    \n    long long crossProduct(const vector<int>& o, const vector<int>& a, const vector<int>& b) {\n        // Cross product of vectors OA and OB\n        return (long long)(a[0] - o[0]) * (b[1] - o[1]) - (long long)(a[1] - o[1]) * (b[0] - o[0]);\n    }\n    \n    bool isConvex(const vector<vector<int>>& pts) {\n        // Check if all cross products have the same sign\n        int sign = 0;\n        for (int i = 0; i < 4; i++) {\n            int j = (i + 1) % 4;\n            int k = (i + 2) % 4;\n            \n            long long cross = crossProduct(pts[i], pts[j], pts[k]);\n            \n            if (cross != 0) {\n                if (sign == 0) {\n                    sign = cross > 0 ? 1 : -1;\n                } else if ((cross > 0 ? 1 : -1) != sign) {\n                    return false;\n                }\n            }\n        }\n        \n        return sign != 0;  // All collinear points are not convex\n    }\n    \n    bool hasParallelSides(const vector<vector<int>>& pts) {\n        // Check if opposite sides are parallel\n        // Side 0-1 and side 2-3\n        bool parallel1 = areParallel(pts[0], pts[1], pts[2], pts[3]);\n        \n        // Side 1-2 and side 3-0\n        bool parallel2 = areParallel(pts[1], pts[2], pts[3], pts[0]);\n        \n        return parallel1 || parallel2;\n    }\n    \n    bool areParallel(const vector<int>& p1, const vector<int>& p2, \n                     const vector<int>& p3, const vector<int>& p4) {\n        // Two lines are parallel if their slopes are equal\n        // To avoid division, use cross product\n        long long dx1 = p2[0] - p1[0];\n        long long dy1 = p2[1] - p1[1];\n        long long dx2 = p4[0] - p3[0];\n        long long dy2 = p4[1] - p3[1];\n        \n        return dx1 * dy2 == dy1 * dx2;\n    }\n};\n# @lc code=end"\n}
+#
+# @lc app=leetcode id=3625 lang=cpp
+#
+# [3625] Count Number of Trapezoids II
+#
+# @lc code=start
+class Solution {
+public:
+    int countTrapezoids(vector<vector<int>>& points) {
+        int n = points.size();
+        int count = 0;
+        
+        // Try all combinations of 4 points
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                for (int k = j + 1; k < n; k++) {
+                    for (int l = k + 1; l < n; l++) {
+                        if (isTrapezoid(points[i], points[j], points[k], points[l])) {
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return count;
+    }
+    
+private:
+    bool isTrapezoid(vector<int>& p1, vector<int>& p2, vector<int>& p3, vector<int>& p4) {
+        // Check if any three points are collinear (would make invalid quadrilateral)
+        if (areCollinear(p1, p2, p3) || areCollinear(p1, p2, p4) || 
+            areCollinear(p1, p3, p4) || areCollinear(p2, p3, p4)) {
+            return false;
+        }
+        
+        // Check if at least one pair of opposite sides is parallel
+        // There are 3 ways to pair 4 points into opposite sides
+        bool pair1 = isParallel(p1, p2, p3, p4);  // (p1,p2) with (p3,p4)
+        bool pair2 = isParallel(p1, p3, p2, p4);  // (p1,p3) with (p2,p4)
+        bool pair3 = isParallel(p1, p4, p2, p3);  // (p1,p4) with (p2,p3)
+        
+        return pair1 || pair2 || pair3;
+    }
+    
+    bool areCollinear(vector<int>& p1, vector<int>& p2, vector<int>& p3) {
+        // Three points are collinear if cross product is zero
+        long long dx1 = p2[0] - p1[0];
+        long long dy1 = p2[1] - p1[1];
+        long long dx2 = p3[0] - p1[0];
+        long long dy2 = p3[1] - p1[1];
+        
+        return dx1 * dy2 == dx2 * dy1;
+    }
+    
+    bool isParallel(vector<int>& p1, vector<int>& p2, vector<int>& p3, vector<int>& p4) {
+        // Two lines are parallel if they have the same slope
+        // Using cross product to avoid division: (y2-y1)/(x2-x1) == (y4-y3)/(x4-x3)
+        // Equivalent to: (y2-y1)*(x4-x3) == (y4-y3)*(x2-x1)
+        long long dx1 = p2[0] - p1[0];
+        long long dy1 = p2[1] - p1[1];
+        long long dx2 = p4[0] - p3[0];
+        long long dy2 = p4[1] - p3[1];
+        
+        return dy1 * dx2 == dy2 * dx1;
+    }
+};
+# @lc code=end
