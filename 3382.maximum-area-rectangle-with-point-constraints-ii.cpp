@@ -3,74 +3,93 @@
 #
 # [3382] Maximum Area Rectangle With Point Constraints II
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maxRectangleArea(vector<int>& xCoord, vector<int>& yCoord) {
         int n = xCoord.size();
-        
-        map<int, set<int>> xToY;
-        
-        for (int i = 0; i < n; i++) {
-            xToY[xCoord[i]].insert(yCoord[i]);
+        if (n < 4) return -1;
+        vector<pair<int, int>> pts(n);
+        for (int j = 0; j < n; ++j) {
+            pts[j] = {xCoord[j], yCoord[j]};
         }
-        
-        long long maxArea = -1;
-        
-        vector<int> xVals;
-        for (auto& [x, _] : xToY) {
-            xVals.push_back(x);
+        sort(pts.begin(), pts.end());
+        vector<int> all_x;
+        for (const auto& p : pts) {
+            all_x.push_back(p.first);
         }
-        
-        for (int i = 0; i < xVals.size(); i++) {
-            for (int j = i + 1; j < xVals.size(); j++) {
-                int x1 = xVals[i], x2 = xVals[j];
-                auto& ys1 = xToY[x1];
-                auto& ys2 = xToY[x2];
-                
-                // Find common y-coordinates
-                vector<int> commonY;
-                for (int y : ys1) {
-                    if (ys2.count(y)) {
-                        commonY.push_back(y);
-                    }
-                }
-                
-                for (int p = 0; p < commonY.size(); p++) {
-                    for (int q = p + 1; q < commonY.size(); q++) {
-                        int y1 = commonY[p], y2 = commonY[q];
-                        
-                        // Check if any point is inside [x1, x2] × [y1, y2] other than corners
-                        bool valid = true;
-                        
-                        // Only check x values between x1 and x2
-                        for (int idx = i; idx <= j && valid; idx++) {
-                            int x = xVals[idx];
-                            
-                            for (int y : xToY[x]) {
-                                if (y < y1 || y > y2) continue;
-                                
-                                // Skip corners
-                                if ((x == x1 && y == y1) || (x == x1 && y == y2) ||
-                                    (x == x2 && y == y1) || (x == x2 && y == y2)) {
-                                    continue;
-                                }
-                                
-                                valid = false;
-                                break;
-                            }
-                        }
-                        
-                        if (valid) {
-                            long long area = (long long)(x2 - x1) * (y2 - y1);
-                            maxArea = max(maxArea, area);
-                        }
-                    }
+        sort(all_x.begin(), all_x.end());
+        auto last = unique(all_x.begin(), all_x.end());
+        all_x.erase(last, all_x.end());
+        int m = all_x.size();
+        map<int, int> x_to_idx;
+        for (int j = 0; j < m; ++j) {
+            x_to_idx[all_x[j]] = j;
+        }
+        vector<vector<int>> col_ys(m);
+        map<pair<int, int>, vector<int>> supp;
+        int i = 0;
+        while (i < n) {
+            int curx = pts[i].first;
+            vector<int> ys;
+            while (i < n && pts[i].first == curx) {
+                ys.push_back(pts[i].second);
+                ++i;
+            }
+            sort(ys.begin(), ys.end());
+            int idx = x_to_idx[curx];
+            col_ys[idx] = ys;
+            for (size_t k = 0; k + 1 < ys.size(); ++k) {
+                supp[{ys[k], (int)ys[k + 1]}].push_back(idx);
+            }
+        }
+        int tsz = 1;
+        while (tsz < m) tsz <<= 1;
+        vector<vector<int>> tree(2 * tsz);
+        for (int j = 0; j < m; ++j) {
+            tree[tsz + j] = col_ys[j];
+        }
+        for (int v = tsz - 1; v >= 1; --v) {
+            size_t sz = tree[2 * v].size() + tree[2 * v + 1].size();
+            tree[v].resize(sz);
+            merge(tree[2 * v].begin(), tree[2 * v].end(),
+                  tree[2 * v + 1].begin(), tree[2 * v + 1].end(),
+                  tree[v].begin());
+        }
+        auto has_point = [&](auto&& self, int v, int tl, int tr, int l, int r, int yl, int yh) -> bool {
+            if (l > r) return false;
+            if (tl == l && tr == r) {
+                const auto& vec = tree[v];
+                auto it = lower_bound(vec.cbegin(), vec.cend(), yl);
+                return it != vec.cend() && *it <= yh;
+            }
+            int tm = (tl + tr) / 2;
+            if (self(self, 2 * v, tl, tm, l, min(r, tm), yl, yh)) return true;
+            return self(self, 2 * v + 1, tm + 1, tr, max(l, tm + 1), r, yl, yh);
+        };
+        long long ans = -1;
+        for (const auto& entry : supp) {
+            int yl = entry.first.first;
+            int yh = entry.first.second;
+            vector<int>& Svec = entry.second;
+            if (Svec.size() < 2) continue;
+            sort(Svec.begin(), Svec.end());
+            for (size_t k = 0; k + 1 < Svec.size(); ++k) {
+                int ia = Svec[k];
+                int ib = Svec[k + 1];
+                int L = ia + 1;
+                int R = ib - 1;
+                bool hasp = (L <= R) && has_point(has_point, 1, 0, tsz - 1, L, R, yl, yh);
+                if (!hasp) {
+                    long long width = (long long)all_x[ib] - all_x[ia];
+                    long long height = (long long)yh - yl;
+                    long long area = width * height;
+                    if (area > ans) ans = area;
                 }
             }
         }
-        
-        return maxArea;
+        return ans;
     }
 };
 # @lc code=end
