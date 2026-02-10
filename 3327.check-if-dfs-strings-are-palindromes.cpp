@@ -13,51 +13,46 @@ public:
         for (int i = 1; i < n; ++i) {
             adj[parent[i]].push_back(i);
         }
-        for (auto& ch : adj) {
-            sort(ch.begin(), ch.end());
+        for (auto& lis : adj) {
+            sort(lis.begin(), lis.end());
         }
-        const long long MOD1 = 1000000007LL;
-        const long long MOD2 = 1000000009LL;
-        const long long B1 = 31LL;
-        const long long B2 = 37LL;
-        vector<long long> p1(n + 1, 1LL);
-        vector<long long> p2(n + 1, 1LL);
+        using ll = long long;
+        const ll MOD1 = 1000000007LL;
+        const ll BASE1 = 131;
+        const ll MOD2 = 1000000009LL;
+        const ll BASE2 = 137;
+        vector<ll> pow1(n + 1, 1LL);
+        vector<ll> pow2(n + 1, 1LL);
         for (int i = 1; i <= n; ++i) {
-            p1[i] = p1[i - 1] * B1 % MOD1;
-            p2[i] = p2[i - 1] * B2 % MOD2;
+            pow1[i] = pow1[i - 1] * BASE1 % MOD1;
+            pow2[i] = pow2[i - 1] * BASE2 % MOD2;
         }
-        vector<long long> hf1(n), hf2(n), hr1(n), hr2(n);
-        vector<int> len(n);
-        std::function<void(int)> dfs = [&](int u) {
-            len[u] = 1;
-            long long f1 = 0, f2 = 0;
-            long long r1 = (s[u] - 'a' + 1) % MOD1;
-            long long r2 = (s[u] - 'a' + 1) % MOD2;
-            for (int v : adj[u]) {
-                dfs(v);
-                len[u] += len[v];
-                f1 = (f1 * p1[len[v]] % MOD1 + hf1[v]) % MOD1;
-                f2 = (f2 * p2[len[v]] % MOD2 + hf2[v]) % MOD2;
+        vector<bool> answer(n);
+        auto dfs = [&](auto&& self, int node) -> tuple<ll, ll, ll, ll, int> {
+            ll hleft1 = 0, hright1 = 0, hleft2 = 0, hright2 = 0;
+            int leng = 0;
+            for (int child : adj[node]) {
+                auto [lh1, rh1, lh2, rh2, clen] = self(self, child);
+                ll nhleft1 = (hleft1 * pow1[clen] % MOD1 + lh1) % MOD1;
+                ll nhright1 = (hright1 + pow1[leng] * rh1 % MOD1) % MOD1;
+                ll nhleft2 = (hleft2 * pow2[clen] % MOD2 + lh2) % MOD2;
+                ll nhright2 = (hright2 + pow2[leng] * rh2 % MOD2) % MOD2;
+                hleft1 = nhleft1;
+                hright1 = nhright1;
+                hleft2 = nhleft2;
+                hright2 = nhright2;
+                leng += clen;
             }
-            long long ch = s[u] - 'a' + 1;
-            f1 = (f1 * p1[1] % MOD1 + ch) % MOD1;
-            f2 = (f2 * p2[1] % MOD2 + ch) % MOD2;
-            for (int j = adj[u].size() - 1; j >= 0; --j) {
-                int v = adj[u][j];
-                r1 = (r1 * p1[len[v]] % MOD1 + hr1[v]) % MOD1;
-                r2 = (r2 * p2[len[v]] % MOD2 + hr2[v]) % MOD2;
-            }
-            hf1[u] = f1;
-            hf2[u] = f2;
-            hr1[u] = r1;
-            hr2[u] = r2;
+            int val = s[node] - 'a' + 1;
+            ll final_left1 = (hleft1 * pow1[1] % MOD1 + val) % MOD1;
+            ll final_right1 = (hright1 + pow1[leng] * (ll)val % MOD1) % MOD1;
+            ll final_left2 = (hleft2 * pow2[1] % MOD2 + val) % MOD2;
+            ll final_right2 = (hright2 + pow2[leng] * (ll)val % MOD2) % MOD2;
+            answer[node] = (final_left1 == final_right1) && (final_left2 == final_right2);
+            return {final_left1, final_right1, final_left2, final_right2, leng + 1};
         };
-        dfs(0);
-        vector<bool> ans(n);
-        for (int i = 0; i < n; ++i) {
-            ans[i] = (hf1[i] == hr1[i] && hf2[i] == hr2[i]);
-        }
-        return ans;
+        dfs(dfs, 0);
+        return answer;
     }
 };
 # @lc code=end
