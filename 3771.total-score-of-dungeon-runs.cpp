@@ -8,24 +8,30 @@ class Solution {
 public:
     long long totalScore(int hp, vector<int>& damage, vector<int>& requirement) {
         int n = damage.size();
-        long long total = 0;
-        long long currentPrefix = 0;
+        vector<long long> cumDamage(n + 1, 0);
         
-        multiset<long long> prefixSet;
-        prefixSet.insert(0);  // prefix[0] = 0
-        
+        // Compute cumulative damage
         for (int i = 0; i < n; i++) {
-            currentPrefix += damage[i];
-            long long threshold = currentPrefix - hp + requirement[i];
-            
-            // Count how many prefix values are >= threshold
-            auto it = prefixSet.lower_bound(threshold);
-            total += distance(it, prefixSet.end());
-            
-            prefixSet.insert(currentPrefix);
+            cumDamage[i + 1] = cumDamage[i] + damage[i];
         }
         
-        return total;
+        long long totalScore = 0;
+        multiset<long long> seen;
+        seen.insert(0);  // cumDamage[0]
+        
+        // For each room i
+        for (int i = 0; i < n; i++) {
+            long long threshold = cumDamage[i + 1] + requirement[i] - hp;
+            
+            // Count how many values in seen are >= threshold
+            auto it = seen.lower_bound(threshold);
+            totalScore += distance(it, seen.end());
+            
+            // Add cumDamage[i + 1] for next iteration
+            seen.insert(cumDamage[i + 1]);
+        }
+        
+        return totalScore;
     }
 };
 # @lc code=end
