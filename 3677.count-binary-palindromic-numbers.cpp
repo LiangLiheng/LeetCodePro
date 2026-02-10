@@ -3,74 +3,40 @@
 #
 # [3677] Count Binary Palindromic Numbers
 #
+
 # @lc code=start
 class Solution {
 public:
     int countBinaryPalindromes(long long n) {
         if (n == 0) return 1;
-        
-        int count = 0;
-        
-        // Find bit length of n
-        int bit_len = 64 - __builtin_clzll(n);
-        
-        // Count length 1: "0" and "1"
-        count = 2;
-        
-        // Count lengths 2 to bit_len - 1
-        for (int len = 2; len < bit_len; len++) {
-            if (len % 2 == 1) {
-                // Odd length: 2^((len-1)/2) palindromes
-                count += (1 << ((len - 1) / 2));
-            } else {
-                // Even length: 2^(len/2-1) palindromes
-                count += (1 << (len / 2 - 1));
+        int L = 64 - __builtin_clzll(n);
+        long long ans = 1LL; // for 0
+        for (int len = 1; len < L; ++len) {
+            int free_bits = (len + 1) / 2 - 1;
+            ans += (1LL << free_bits);
+        }
+        // same length
+        int left_len = (L + 1) / 2;
+        int free_bits = left_len - 1;
+        int num_masks = 1 << free_bits;
+        long long cnt_same = 0;
+        for (int mask = 0; mask < num_masks; ++mask) {
+            long long pal = (1LL << (L - 1)) | 1LL;
+            int pos = L - 2;
+            for (int b = 0; b < free_bits; ++b) {
+                if (mask & (1 << b)) {
+                    pal |= (1LL << pos);
+                    int mpos = L - 1 - pos;
+                    pal |= (1LL << mpos);
+                }
+                --pos;
+            }
+            if (pal <= n) {
+                ++cnt_same;
             }
         }
-        
-        // Count palindromes of length bit_len that are <= n
-        count += countPalindromesOfLengthLE(bit_len, n);
-        
-        return count;
-    }
-    
-private:
-    int countPalindromesOfLengthLE(int len, long long n) {
-        int count = 0;
-        int half_len = (len + 1) / 2;
-        
-        // Generate all possible first halves
-        long long start = 1LL << (half_len - 1);
-        long long end = 1LL << half_len;
-        
-        for (long long half = start; half < end; half++) {
-            long long palindrome = makePalindrome(half, len);
-            if (palindrome <= n) {
-                count++;
-            } else {
-                break; // Palindromes are in increasing order
-            }
-        }
-        
-        return count;
-    }
-    
-    long long makePalindrome(long long half, int len) {
-        long long result = half;
-        long long temp = half;
-        
-        // Skip middle bit for odd length
-        if (len % 2 == 1) {
-            temp >>= 1;
-        }
-        
-        // Mirror the remaining bits
-        while (temp > 0) {
-            result = (result << 1) | (temp & 1);
-            temp >>= 1;
-        }
-        
-        return result;
+        ans += cnt_same;
+        return static_cast<int>(ans);
     }
 };
 # @lc code=end
