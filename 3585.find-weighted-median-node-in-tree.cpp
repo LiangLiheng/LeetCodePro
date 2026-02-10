@@ -8,7 +8,7 @@ class Solution {
 public:
     vector<int> findMedian(int n, vector<vector<int>>& edges, vector<vector<int>>& queries) {
         // Build adjacency list
-        unordered_map<int, vector<pair<int, long long>>> graph;
+        vector<vector<pair<int, long long>>> graph(n);
         for (auto& edge : edges) {
             int u = edge[0], v = edge[1];
             long long w = edge[2];
@@ -21,65 +21,57 @@ public:
         for (auto& query : queries) {
             int start = query[0], end = query[1];
             
-            if (start == end) {
-                result.push_back(start);
-                continue;
-            }
-            
-            // Find path from start to end using BFS
-            unordered_map<int, int> parent;
-            unordered_map<int, long long> edgeWeight;
+            // BFS to find path
+            vector<int> parent(n, -1);
+            vector<long long> edgeWeight(n, 0);
             queue<int> q;
-            unordered_set<int> visited;
-            
             q.push(start);
-            visited.insert(start);
-            parent[start] = -1;
+            parent[start] = start;
             
             while (!q.empty()) {
-                int curr = q.front();
+                int node = q.front();
                 q.pop();
                 
-                if (curr == end) break;
+                if (node == end) break;
                 
-                for (auto& [neighbor, weight] : graph[curr]) {
-                    if (visited.find(neighbor) == visited.end()) {
-                        visited.insert(neighbor);
-                        parent[neighbor] = curr;
+                for (auto& [neighbor, weight] : graph[node]) {
+                    if (parent[neighbor] == -1) {
+                        parent[neighbor] = node;
                         edgeWeight[neighbor] = weight;
                         q.push(neighbor);
                     }
                 }
             }
             
-            // Reconstruct path
+            // Reconstruct path from start to end
             vector<int> path;
             vector<long long> weights;
             int curr = end;
-            while (curr != -1) {
+            
+            while (curr != start) {
                 path.push_back(curr);
-                if (parent[curr] != -1) {
-                    weights.push_back(edgeWeight[curr]);
-                }
+                weights.push_back(edgeWeight[curr]);
                 curr = parent[curr];
             }
+            path.push_back(start);
             
+            // Reverse to get path from start to end
             reverse(path.begin(), path.end());
             reverse(weights.begin(), weights.end());
             
             // Calculate total weight
             long long totalWeight = 0;
-            for (auto w : weights) {
+            for (long long w : weights) {
                 totalWeight += w;
             }
             
             // Find median node
-            long long cumWeight = 0;
+            long long accumulated = 0;
             int medianNode = start;
             
             for (int i = 0; i < weights.size(); i++) {
-                cumWeight += weights[i];
-                if (cumWeight * 2 >= totalWeight) {
+                accumulated += weights[i];
+                if (accumulated * 2 >= totalWeight) {
                     medianNode = path[i + 1];
                     break;
                 }
