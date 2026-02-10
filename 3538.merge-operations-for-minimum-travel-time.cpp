@@ -7,59 +7,39 @@
 class Solution {
 public:
     int minTravelTime(int l, int n, int k, vector<int>& position, vector<int>& time) {
-        vector<pair<int, int>> signs;
-        for (int i = 0; i < n; i++) {
-            signs.push_back({i, time[i]});
+        const long long INF = 4e18;
+        vector<vector<vector<long long>>> dp(n, vector<vector<long long>>(k + 1, vector<long long>(101, INF)));
+        vector<long long> pref(n + 1, 0);
+        for (int i = 0; i < n; ++i) {
+            pref[i + 1] = pref[i] + time[i];
         }
-        return solve(signs, position, 0, k);
-    }
-    
-private:
-    map<pair<vector<pair<int,int>>, int>, int> memo;
-    
-    int solve(vector<pair<int,int>>& signs, vector<int>& position, int merges_done, int k) {
-        if (merges_done == k) {
-            return calculateCost(signs, position);
-        }
-        
-        auto state = make_pair(signs, merges_done);
-        if (memo.count(state)) {
-            return memo[state];
-        }
-        
-        int result = INT_MAX;
-        
-        for (int i = 0; i < (int)signs.size() - 1; i++) {
-            if (signs[i].first == 0) continue; // Can't remove sign at position 0
-            
-            vector<pair<int,int>> new_signs;
-            for (int j = 0; j < (int)signs.size(); j++) {
-                if (j == i) continue; // Remove this sign
-                if (j == i + 1) {
-                    // Merge: add time from removed sign to this sign
-                    new_signs.push_back({signs[j].first, signs[i].second + signs[j].second});
-                } else {
-                    new_signs.push_back(signs[j]);
+        if (time[0] <= 100) dp[0][0][time[0]] = 0;
+        for (int i = 1; i < n; ++i) {
+            for (int p = 0; p < i; ++p) {
+                int delta = i - p - 1;
+                if (delta > k) continue;
+                long long gsum = pref[i + 1] - pref[p + 1];
+                int ns = (int)gsum;
+                if (ns > 100) continue;
+                for (int j = 0; j <= k - delta; ++j) {
+                    for (int s = 0; s <= 100; ++s) {
+                        long long val = dp[p][j][s];
+                        if (val == INF) continue;
+                        long long addc = (long long)(position[i] - position[p]) * s;
+                        long long nc = val + addc;
+                        int nj = j + delta;
+                        if (nc < dp[i][nj][ns]) {
+                            dp[i][nj][ns] = nc;
+                        }
+                    }
                 }
             }
-            
-            result = min(result, solve(new_signs, position, merges_done + 1, k));
         }
-        
-        memo[state] = result;
-        return result;
-    }
-    
-    int calculateCost(const vector<pair<int,int>>& signs, const vector<int>& position) {
-        int cost = 0;
-        for (int i = 0; i < (int)signs.size() - 1; i++) {
-            int pos_idx1 = signs[i].first;
-            int pos_idx2 = signs[i+1].first;
-            int time_per_km = signs[i].second;
-            int distance = position[pos_idx2] - position[pos_idx1];
-            cost += distance * time_per_km;
+        long long ans = INF;
+        for (int s = 0; s <= 100; ++s) {
+            ans = min(ans, dp[n - 1][k][s]);
         }
-        return cost;
+        return (int)ans;
     }
 };
 # @lc code=end
