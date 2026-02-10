@@ -10,25 +10,24 @@ public:
         int n = balance.size();
         long long total = 0;
         
-        // Check if total sum is non-negative
-        for (int b : balance) {
-            total += b;
+        // Check if solution is possible
+        for (int x : balance) {
+            total += x;
         }
         
         if (total < 0) return -1;
         
         long long minCost = LLONG_MAX;
         
-        // Try each position as the cut point in the circular array
-        for (int cut = 0; cut < n; cut++) {
+        // Try all possible starting positions to linearize the circular array
+        for (int start = 0; start < n; start++) {
             long long cost = 0;
-            long long prefixSum = 0;
+            long long carry = 0;
             
-            // Compute cost for linearized array starting after the cut
+            // Calculate cost for this linearization
             for (int i = 0; i < n - 1; i++) {
-                int idx = (cut + 1 + i) % n;
-                prefixSum += balance[idx];
-                cost += abs(prefixSum);
+                carry += balance[(start + i) % n];
+                cost += abs(carry);
             }
             
             minCost = min(minCost, cost);
