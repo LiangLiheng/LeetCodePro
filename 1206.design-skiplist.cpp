@@ -3,36 +3,36 @@
 #
 # [1206] Design Skiplist
 #
+
 # @lc code=start
 class Skiplist {
 private:
     struct Node {
         int val;
-        vector<Node*> forward;
-        Node(int v, int level) : val(v), forward(level, nullptr) {}
+        Node* forward[16];
+        Node(int v) : val(v) {
+            memset(forward, 0, sizeof(forward));
+        }
     };
-    
+
     Node* head;
-    int maxLevel;
-    const int MAX_LEVEL = 16;
-    
-    int randomLevel() {
+    static const int MAX_LEVEL = 16;
+
+    int getRandomLevel() {
         int level = 1;
-        while (rand() % 2 == 0 && level < MAX_LEVEL) {
-            level++;
+        while ((rand() % 2 == 0) && level < MAX_LEVEL) {
+            ++level;
         }
         return level;
     }
-    
 public:
     Skiplist() {
-        maxLevel = 1;
-        head = new Node(-1, MAX_LEVEL);
+        head = new Node(-1);
     }
-    
+
     bool search(int target) {
         Node* curr = head;
-        for (int i = maxLevel - 1; i >= 0; i--) {
+        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
             while (curr->forward[i] && curr->forward[i]->val < target) {
                 curr = curr->forward[i];
             }
@@ -40,71 +40,56 @@ public:
         curr = curr->forward[0];
         return curr && curr->val == target;
     }
-    
+
     void add(int num) {
-        vector<Node*> update(MAX_LEVEL, nullptr);
+        Node* update[MAX_LEVEL];
+        memset(update, 0, sizeof(update));
         Node* curr = head;
-        
-        for (int i = maxLevel - 1; i >= 0; i--) {
+        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
             while (curr->forward[i] && curr->forward[i]->val < num) {
                 curr = curr->forward[i];
             }
             update[i] = curr;
         }
-        
-        int level = randomLevel();
-        if (level > maxLevel) {
-            for (int i = maxLevel; i < level; i++) {
-                update[i] = head;
-            }
-            maxLevel = level;
-        }
-        
-        Node* newNode = new Node(num, level);
-        for (int i = 0; i < level; i++) {
-            newNode->forward[i] = update[i]->forward[i];
-            update[i]->forward[i] = newNode;
+        Node* newnode = new Node(num);
+        int rlevel = getRandomLevel();
+        for (int i = 0; i < rlevel; ++i) {
+            newnode->forward[i] = update[i]->forward[i];
+            update[i]->forward[i] = newnode;
         }
     }
-    
+
     bool erase(int num) {
-        vector<Node*> update(MAX_LEVEL, nullptr);
+        Node* update[MAX_LEVEL];
+        memset(update, 0, sizeof(update));
         Node* curr = head;
-        
-        for (int i = maxLevel - 1; i >= 0; i--) {
+        for (int i = MAX_LEVEL - 1; i >= 0; --i) {
             while (curr->forward[i] && curr->forward[i]->val < num) {
                 curr = curr->forward[i];
             }
             update[i] = curr;
         }
-        
         curr = curr->forward[0];
         if (!curr || curr->val != num) {
             return false;
         }
-        
-        for (int i = 0; i < maxLevel; i++) {
-            if (update[i]->forward[i] != curr) {
+        for (int i = 0; i < MAX_LEVEL; ++i) {
+            if (update[i]->forward[i] == curr) {
+                update[i]->forward[i] = curr->forward[i];
+            } else {
                 break;
             }
-            update[i]->forward[i] = curr->forward[i];
         }
-        
         delete curr;
-        
-        while (maxLevel > 1 && !head->forward[maxLevel - 1]) {
-            maxLevel--;
-        }
-        
         return true;
     }
 };
 
 /**
-* Your Skiplist object will be instantiated and called as such:
-* Skiplist* obj = new Skiplist();
-* bool param_1 = obj->search(target);
-* obj->add(num);
-* bool param_3 = obj->erase(num);
-*/
+ * Your Skiplist object will be instantiated and called as such:
+ * Skiplist* obj = new Skiplist();
+ * bool param_1 = obj->search(target);
+ * obj->add(num);
+ * bool param_3 = obj->erase(num);
+ */
 # @lc code=end
