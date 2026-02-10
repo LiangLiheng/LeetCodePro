@@ -10,19 +10,19 @@ public:
     int totalSteps(vector<int>& nums) {
         int n = nums.size();
         vector<int> dp(n, 0);
-        stack<int> st;
+        stack<int> stk;
         int ans = 0;
         for (int i = 0; i < n; ++i) {
-            int cur_steps = 0;
-            while (!st.empty() && nums[st.top()] <= nums[i]) {
-                cur_steps = max(cur_steps, dp[st.top()] + 1);
-                st.pop();
+            int steps = 0;
+            while (!stk.empty() && nums[stk.top()] <= nums[i]) {
+                steps = max(steps, dp[stk.top()]);
+                stk.pop();
             }
-            if (!st.empty()) {
-                dp[i] = max(cur_steps, 1);
+            if (!stk.empty()) {
+                dp[i] = steps + 1;
+                ans = max(ans, dp[i]);
             }
-            ans = max(ans, dp[i]);
-            st.push(i);
+            stk.push(i);
         }
         return ans;
     }
