@@ -3,85 +3,92 @@
 #
 # [3621] Number of Integers With Popcount-Depth Equal to K I
 #
+
 # @lc code=start
+#include <vector>
+#include <algorithm>
+#include <functional>
+#include <cstring>
+using namespace std;
+
 class Solution {
 public:
     long long popcountDepth(long long n, int k) {
-        if (k == 0) {
-            return n >= 1 ? 1 : 0; // Only x=1 has depth 0
+        // Precompute binomial coefficients C[i][j]
+        long long C[65][65];
+        memset(C, 0, sizeof(C));
+        for (int i = 0; i < 65; ++i) {
+            C[i][0] = 1;
+            for (int j = 1; j <= i; ++j) {
+                C[i][j] = C[i - 1][j] + C[i - 1][j - 1];
+            }
         }
-        
-        // Step 1: Precompute depth for popcount values
-        unordered_map<int, int> depth;
-        depth[1] = 0;
-        
-        function<int(int)> getDepth = [&](int val) -> int {
-            if (val == 1) return 0;
-            if (depth.count(val)) return depth[val];
-            int pc = __builtin_popcount(val);
-            return depth[val] = getDepth(pc) + 1;
+
+        auto get_depth = [](long long m) -> int {
+            int dep = 0;
+            while (m > 1) {
+                m = __builtin_popcountll(m);
+                ++dep;
+            }
+            return dep;
         };
-        
-        // Compute depth for all values from 2 to 60
-        for (int i = 2; i <= 60; i++) {
-            getDepth(i);
+
+        if (k == 0) {
+            return 1LL;
         }
-        
-        // Step 2: Find popcount values that lead to depth k
-        // We want popcount values p such that depth(p) = k - 1
-        set<int> target_popcounts;
-        for (int i = 1; i <= 60; i++) {
-            if (depth[i] == k - 1) {
-                target_popcounts.insert(i);
+
+        // Collect target popcounts s with depth(s) == k-1
+        vector<int> S;
+        for (int m = 1; m <= 64; ++m) {
+            if (get_depth(m) == k - 1) {
+                S.push_back(m);
             }
         }
-        
-        if (target_popcounts.empty()) return 0;
-        
-        // Step 3: Count numbers with those popcounts using digit DP
-        vector<int> bits;
-        long long temp = n;
-        while (temp > 0) {
-            bits.push_back(temp & 1);
-            temp >>= 1;
-        }
-        reverse(bits.begin(), bits.end());
-        
-        long long result = 0;
-        
-        for (int pc : target_popcounts) {
-            map<tuple<int, int, bool>, long long> dp;
-            
-            function<long long(int, int, bool)> solve = [&](int pos, int ones, bool tight) -> long long {
-                if (ones > pc) return 0;
-                if (pos == bits.size()) {
-                    return ones == pc ? 1 : 0;
+
+        auto get_bits = [](long long num) -> vector<int> {
+            vector<int> bits;
+            while (num > 0) {
+                bits.push_back(num & 1);
+                num >>= 1;
+            }
+            reverse(bits.begin(), bits.end());
+            return bits;
+        };
+
+        auto count_pop = [&](long long nn, int target_s, const long long (&comb)[65][65]) -> long long {
+            if (nn < 1) return 0LL;
+            vector<int> bits = get_bits(nn);
+            int L = bits.size();
+            if (L == 0) return 0LL;
+            function<long long(int, int, int)> dfs = [&](int pos, int cnt, int tight) -> long long {
+                if (cnt > target_s) return 0LL;
+                if (pos == L) {
+                    return (cnt == target_s) ? 1LL : 0LL;
                 }
-                
-                auto key = make_tuple(pos, ones, tight);
-                if (dp.count(key)) return dp[key];
-                
-                int maxDigit = tight ? bits[pos] : 1;
+                if (!tight) {
+                    int rem = L - pos;
+                    int need = target_s - cnt;
+                    if (need < 0 || need > rem) return 0LL;
+                    return comb[rem][need];
+                }
+                int up = bits[pos];
                 long long res = 0;
-                
-                for (int d = 0; d <= maxDigit; d++) {
-                    res += solve(pos + 1, ones + d, tight && (d == maxDigit));
+                for (int d = 0; d <= up; ++d) {
+                    res += dfs(pos + 1, cnt + d, tight && (d == up));
                 }
-                
-                return dp[key] = res;
+                return res;
             };
-            
-            long long count = solve(0, 0, true);
-            
-            // Special case: if pc = 1 and k > 0, exclude x = 1
-            if (pc == 1 && k > 0 && n >= 1) {
-                count--;
-            }
-            
-            result += count;
+            return dfs(0, 0, 1);
+        };
+
+        long long ans = 0;
+        for (int s : S) {
+            ans += count_pop(n, s, C);
         }
-        
-        return result;
+        if (k == 1) {
+            ans -= 1LL;
+        }
+        return ans;
     }
 };
 # @lc code=end
