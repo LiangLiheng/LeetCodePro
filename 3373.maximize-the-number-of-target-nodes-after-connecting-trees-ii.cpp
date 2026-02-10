@@ -1,40 +1,83 @@
-CRITICAL - READ THIS FIRST:
-These are INTERNAL reasoning guidelines to help you solve tasks.
-DO NOT output these guidelines - use them to guide your thinking.
-YOUR OUTPUT must be the actual solution to THE SPECIFIC TASK you are given.
-
-REQUIRED OUTPUT:
-Your response must contain the concrete answer/solution to THIS SPECIFIC task.
-Never output methodology descriptions or abstract guidance - output actual work product (code/answers).
-
-Grounding Principles:
-- Apply these steps to THE CURRENT TASK you are solving
-- Distinguish internal process (Steps 1-5) from concrete output (Step 6)
-- Your final output must solve THIS SPECIFIC problem, not describe problem-solving in general
-
-Reasoning Process for THIS TASK:
-
-Step 1: Identify what THIS SPECIFIC task requires - Read the current problem carefully. What is being asked? What are the inputs and outputs for THIS task?
-
-Step 2: Examine THIS task's constraints and patterns - What type of problem is THIS (tree/graph/array/etc.)? What scale/constraints apply to THIS specific case?
-
-Step 3: Formulate approach for THIS problem - Based on THIS task's structure, what algorithmic approach will work? What data structures does THIS problem need?
-
-Step 4: Trace your approach on THIS task's examples - Walk through the provided examples for THIS task. Does your approach work correctly?
-
-Step 5: Complete algorithm design for THIS task - Map out the specific operations needed for THIS problem. Consider edge cases in THIS task.
-
-Step 6: GENERATE THE ACTUAL SOLUTION TO THIS TASK
->>> This is where you produce concrete output <<<
-Write the complete working code/answer for THIS SPECIFIC problem.
-Your 'result' field MUST contain the full executable solution to THE CURRENT TASK.
-NOT pseudocode. NOT instructions. NOT descriptions.
-ACTUAL working code that solves THIS problem.
-
-Step 7: Verify YOUR implementation for THIS task - Trace through your actual code with THIS task's test cases. Does it correctly solve THIS specific problem?
-
-FINAL VERIFICATION before submitting:
-✓ Does my output solve THIS SPECIFIC task (not tasks in general)?
-✓ Is my 'result' field actual code/solution (not descriptions of what code should do)?
-✓ Have I implemented a complete solution to THE CURRENT PROBLEM (not described how to solve)?
-✓ If someone runs/reads my output, will it solve THIS task?
+#
+# @lc app=leetcode id=3373 lang=cpp
+#
+# [3373] Maximize the Number of Target Nodes After Connecting Trees II
+#
+# @lc code=start
+class Solution {
+public:
+    vector<int> maxTargetNodes(vector<vector<int>>& edges1, vector<vector<int>>& edges2) {
+        int n = edges1.size() + 1;
+        int m = edges2.size() + 1;
+        
+        // Build adjacency lists
+        vector<vector<int>> graph1(n), graph2(m);
+        for (auto& e : edges1) {
+            graph1[e[0]].push_back(e[1]);
+            graph1[e[1]].push_back(e[0]);
+        }
+        for (auto& e : edges2) {
+            graph2[e[0]].push_back(e[1]);
+            graph2[e[1]].push_back(e[0]);
+        }
+        
+        // Color tree1 using BFS
+        vector<int> color1(n, -1);
+        queue<int> q;
+        q.push(0);
+        color1[0] = 0;
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int v : graph1[u]) {
+                if (color1[v] == -1) {
+                    color1[v] = 1 - color1[u];
+                    q.push(v);
+                }
+            }
+        }
+        
+        // Count nodes of each color in tree1
+        int cnt1_0 = 0, cnt1_1 = 0;
+        for (int i = 0; i < n; i++) {
+            if (color1[i] == 0) cnt1_0++;
+            else cnt1_1++;
+        }
+        
+        // Color tree2 using BFS
+        vector<int> color2(m, -1);
+        q.push(0);
+        color2[0] = 0;
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int v : graph2[u]) {
+                if (color2[v] == -1) {
+                    color2[v] = 1 - color2[u];
+                    q.push(v);
+                }
+            }
+        }
+        
+        // Count nodes of each color in tree2
+        int cnt2_0 = 0, cnt2_1 = 0;
+        for (int i = 0; i < m; i++) {
+            if (color2[i] == 0) cnt2_0++;
+            else cnt2_1++;
+        }
+        int maxCount2 = max(cnt2_0, cnt2_1);
+        
+        // Build answer
+        vector<int> answer(n);
+        for (int i = 0; i < n; i++) {
+            if (color1[i] == 0) {
+                answer[i] = cnt1_0 + maxCount2;
+            } else {
+                answer[i] = cnt1_1 + maxCount2;
+            }
+        }
+        
+        return answer;
+    }
+};
+# @lc code=end
