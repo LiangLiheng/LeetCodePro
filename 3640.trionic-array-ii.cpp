@@ -10,43 +10,57 @@ public:
         int n = nums.size();
         const long long NEG_INF = LLONG_MIN / 2;
         
-        vector<long long> inc1(n, NEG_INF);
-        vector<long long> dec(n, NEG_INF);
-        vector<long long> inc2(n, NEG_INF);
+        // DP states:
+        // inc: max sum of strictly increasing sequence ending at current position
+        // dec: max sum of inc->dec pattern ending at current position (in dec phase)
+        // tri: max sum of complete trionic pattern ending at current position
+        long long inc = nums[0];
+        long long dec = NEG_INF;
+        long long tri = NEG_INF;
+        long long result = NEG_INF;
         
         for (int i = 1; i < n; i++) {
-            // Phase 1: strictly increasing
+            long long new_inc, new_dec, new_tri;
+            
+            // Update increasing state
             if (nums[i] > nums[i-1]) {
-                if (inc1[i-1] != NEG_INF) {
-                    inc1[i] = max(inc1[i], inc1[i-1] + nums[i]);
-                }
-                inc1[i] = max(inc1[i], (long long)nums[i-1] + nums[i]);
+                new_inc = inc + nums[i];
+            } else {
+                new_inc = nums[i];
             }
             
-            // Phase 2: strictly decreasing (must follow phase 1)
+            // Update decreasing state (after peak)
             if (nums[i] < nums[i-1]) {
-                if (inc1[i-1] != NEG_INF) {
-                    dec[i] = max(dec[i], inc1[i-1] + nums[i]);
+                new_dec = inc + nums[i];  // Start new dec from current inc
+                if (dec != NEG_INF) {
+                    new_dec = max(new_dec, dec + nums[i]);  // Or continue existing dec
                 }
-                if (dec[i-1] != NEG_INF) {
-                    dec[i] = max(dec[i], dec[i-1] + nums[i]);
-                }
+            } else {
+                new_dec = NEG_INF;
             }
             
-            // Phase 3: strictly increasing (must follow phase 2)
+            // Update trionic state (after valley, increasing again)
             if (nums[i] > nums[i-1]) {
-                if (dec[i-1] != NEG_INF) {
-                    inc2[i] = max(inc2[i], dec[i-1] + nums[i]);
+                new_tri = NEG_INF;
+                if (dec != NEG_INF) {
+                    new_tri = max(new_tri, dec + nums[i]);  // Start new inc from dec
                 }
-                if (inc2[i-1] != NEG_INF) {
-                    inc2[i] = max(inc2[i], inc2[i-1] + nums[i]);
+                if (tri != NEG_INF) {
+                    new_tri = max(new_tri, tri + nums[i]);  // Or continue existing tri
                 }
+            } else {
+                new_tri = NEG_INF;
             }
-        }
-        
-        long long result = NEG_INF;
-        for (int i = 0; i < n; i++) {
-            result = max(result, inc2[i]);
+            
+            // Update states
+            inc = new_inc;
+            dec = new_dec;
+            tri = new_tri;
+            
+            // Track maximum trionic sum
+            if (tri != NEG_INF) {
+                result = max(result, tri);
+            }
         }
         
         return result;
