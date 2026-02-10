@@ -1,53 +1,65 @@
-/*
- * @lc app=leetcode id=3604 lang=cpp
- *
- * [3604] Minimum Time to Reach Destination in Directed Graph
- */
-
-// @lc code=start
+#
+# @lc app=leetcode id=3604 lang=cpp
+#
+# [3604] Minimum Time to Reach Destination in Directed Graph
+#
+# @lc code=start
 class Solution {
 public:
     int minTime(int n, vector<vector<int>>& edges) {
-        // Build adjacency list: graph[u] = [(v, start, end), ...]
-        vector<vector<tuple<int, int, int>>> graph(n);
+        // Build adjacency list: graph[u] = [[v, start, end], ...]
+        vector<vector<vector<int>>> graph(n);
         for (auto& edge : edges) {
             int u = edge[0], v = edge[1], start = edge[2], end = edge[3];
             graph[u].push_back({v, start, end});
         }
         
-        // Dijkstra's algorithm
-        // Priority queue: (time, node)
-        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq;
-        vector<int> dist(n, INT_MAX);
+        // Dijkstra's algorithm with priority queue
+        vector<int> dist(n, INT_MAX); // minimum time to reach each node
+        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq; // (time, node)
         
-        pq.push({0, 0});
         dist[0] = 0;
+        pq.push({0, 0});
         
         while (!pq.empty()) {
-            auto [time, u] = pq.top();
+            auto [time, node] = pq.top();
             pq.pop();
             
-            // Skip if we've already found a better path to u
-            if (time > dist[u]) continue;
+            // If we reached the destination
+            if (node == n - 1) {
+                return time;
+            }
             
-            // Try all outgoing edges from u
-            for (auto [v, start, end] : graph[u]) {
-                // We can only use this edge if time <= end
-                if (time <= end) {
-                    // The earliest we can use this edge is max(time, start)
-                    int use_time = max(time, start);
-                    // We arrive at v at time use_time + 1
-                    int arrival_time = use_time + 1;
-                    
-                    if (arrival_time < dist[v]) {
-                        dist[v] = arrival_time;
-                        pq.push({arrival_time, v});
-                    }
+            // Skip if we've already found a better path to this node
+            if (time > dist[node]) {
+                continue;
+            }
+            
+            // Explore neighbors
+            for (auto& edge : graph[node]) {
+                int neighbor = edge[0];
+                int start = edge[1];
+                int end = edge[2];
+                
+                // If current time is beyond the edge's end time, skip
+                if (time > end) {
+                    continue;
+                }
+                
+                // Calculate departure time (wait if necessary)
+                int departureTime = max(time, start);
+                int arrivalTime = departureTime + 1;
+                
+                // Update if we found a better path
+                if (arrivalTime < dist[neighbor]) {
+                    dist[neighbor] = arrivalTime;
+                    pq.push({arrivalTime, neighbor});
                 }
             }
         }
         
-        return dist[n-1] == INT_MAX ? -1 : dist[n-1];
+        // If we couldn't reach the destination
+        return dist[n - 1] == INT_MAX ? -1 : dist[n - 1];
     }
 };
-// @lc code=end
+# @lc code=end
