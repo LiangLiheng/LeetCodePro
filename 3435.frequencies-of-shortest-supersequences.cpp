@@ -3,65 +3,77 @@
 #
 # [3435] Frequencies of Shortest Supersequences
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<vector<int>> supersequences(vector<string>& words) {
-        int n = words.size();
-        
-        // State: vector of positions for each word (0, 1, or 2)
-        // Use map to store: state -> set of frequency arrays
-        map<vector<int>, set<vector<int>>> current_level;
-        
-        vector<int> initial(n, 0);
-        vector<int> empty_freq(26, 0);
-        current_level[initial].insert(empty_freq);
-        
-        vector<int> final_state(n, 2);
-        
-        // BFS level by level
-        while (true) {
-            // Check if we've reached final state
-            if (current_level.count(final_state)) {
-                vector<vector<int>> result(
-                    current_level[final_state].begin(),
-                    current_level[final_state].end()
-                );
-                return result;
-            }
-            
-            map<vector<int>, set<vector<int>>> next_level;
-            
-            for (auto& [state, freq_set] : current_level) {
-                // Collect all characters that need to be matched
-                set<char> chars;
-                for (int i = 0; i < n; i++) {
-                    if (state[i] < 2) {
-                        chars.insert(words[i][state[i]]);
-                    }
-                }
-                
-                // Try each character
-                for (char c : chars) {
-                    vector<int> next_state = state;
-                    for (int i = 0; i < n; i++) {
-                        if (state[i] < 2 && words[i][state[i]] == c) {
-                            next_state[i]++;
-                        }
-                    }
-                    
-                    // Update frequencies
-                    for (auto freq : freq_set) {
-                        freq[c - 'a']++;
-                        next_level[next_state].insert(freq);
-                    }
-                }
-            }
-            
-            current_level = next_level;
+        set<char> uniq;
+        for (const auto& w : words) {
+            uniq.insert(w[0]);
+            uniq.insert(w[1]);
         }
-        
-        return {};
+        vector<char> letters(uniq.begin(), uniq.end());
+        int k = letters.size();
+        unordered_map<char, int> let_id;
+        for (int i = 0; i < k; ++i) {
+            let_id[letters[i]] = i;
+        }
+        vector<vector<int>> graph(k);
+        for (const auto& w : words) {
+            int u = let_id[w[0]];
+            int v = let_id[w[1]];
+            graph[u].push_back(v);
+        }
+        auto is_dag = [&](int mask) -> bool {
+            vector<int> indeg(k, 0);
+            for (int i = 0; i < k; ++i) {
+                if ((mask & (1 << i)) == 0) continue;
+                for (int nei : graph[i]) {
+                    if ((mask & (1 << nei))) {
+                        ++indeg[nei];
+                    }
+                }
+            }
+            queue<int> q;
+            int cnt = 0;
+            int sz = __builtin_popcount(mask);
+            for (int i = 0; i < k; ++i) {
+                if ((mask & (1 << i)) && indeg[i] == 0) {
+                    q.push(i);
+                }
+            }
+            while (!q.empty()) {
+                int u = q.front(); q.pop();
+                ++cnt;
+                for (int nei : graph[u]) {
+                    if ((mask & (1 << nei)) && --indeg[nei] == 0) {
+                        q.push(nei);
+                    }
+                }
+            }
+            return cnt == sz;
+        };
+        int max_sz = 0;
+        for (int mask = 0; mask < (1 << k); ++mask) {
+            if (is_dag(mask)) {
+                max_sz = max(max_sz, __builtin_popcount(mask));
+            }
+        }
+        vector<vector<int>> ans;
+        for (int mask = 0; mask < (1 << k); ++mask) {
+            if (is_dag(mask)) {
+                if (__builtin_popcount(mask) == max_sz) {
+                    vector<int> freq(26, 0);
+                    for (int i = 0; i < k; ++i) {
+                        int cnt = (mask & (1 << i)) ? 1 : 2;
+                        freq[letters[i] - 'a'] = cnt;
+                    }
+                    ans.push_back(freq);
+                }
+            }
+        }
+        return ans;
     }
 };
 # @lc code=end
