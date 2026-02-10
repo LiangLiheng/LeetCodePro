@@ -3,86 +3,74 @@
 #
 # [3559] Number of Ways to Assign Edge Weights II
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> assignEdgeWeights(vector<vector<int>>& edges, vector<vector<int>>& queries) {
-        const int MOD = 1e9 + 7;
         int n = edges.size() + 1;
-        
-        // Build adjacency list
-        vector<vector<int>> graph(n + 1);
-        for (auto& edge : edges) {
-            graph[edge[0]].push_back(edge[1]);
-            graph[edge[1]].push_back(edge[0]);
+        const int MOD = 1000000007;
+        const int LOG = 18;
+        vector<vector<int>> adj(n + 1);
+        for (const auto& e : edges) {
+            int u = e[0], v = e[1];
+            adj[u].push_back(v);
+            adj[v].push_back(u);
         }
-        
-        vector<int> result;
-        
-        for (auto& query : queries) {
-            int u = query[0];
-            int v = query[1];
-            
-            if (u == v) {
-                result.push_back(0);
-                continue;
-            }
-            
-            // Find path from u to v using BFS
-            int pathLength = findPathLength(graph, u, v, n);
-            
-            if (pathLength == 0) {
-                result.push_back(0);
-            } else {
-                // Calculate 2^(pathLength - 1) mod MOD
-                long long ans = modPow(2, pathLength - 1, MOD);
-                result.push_back(ans);
-            }
-        }
-        
-        return result;
-    }
-    
-private:
-    int findPathLength(vector<vector<int>>& graph, int start, int end, int n) {
-        if (start == end) return 0;
-        
-        queue<pair<int, int>> q;  // {node, distance}
-        vector<bool> visited(n + 1, false);
-        
-        q.push({start, 0});
-        visited[start] = true;
-        
+        vector<int> depth(n + 1, 0);
+        vector<vector<int>> par(LOG, vector<int>(n + 1, 0));
+        vector<bool> vis(n + 1, false);
+        queue<int> q;
+        q.push(1);
+        vis[1] = true;
+        par[0][1] = 1;
         while (!q.empty()) {
-            auto [node, dist] = q.front();
-            q.pop();
-            
-            if (node == end) {
-                return dist;
-            }
-            
-            for (int neighbor : graph[node]) {
-                if (!visited[neighbor]) {
-                    visited[neighbor] = true;
-                    q.push({neighbor, dist + 1});
+            int u = q.front(); q.pop();
+            for (int v : adj[u]) {
+                if (!vis[v]) {
+                    vis[v] = true;
+                    par[0][v] = u;
+                    depth[v] = depth[u] + 1;
+                    q.push(v);
                 }
             }
         }
-        
-        return 0;
-    }
-    
-    long long modPow(long long base, long long exp, long long mod) {
-        long long result = 1;
-        base %= mod;
-        while (exp > 0) {
-            if (exp % 2 == 1) {
-                result = (result * base) % mod;
+        for (int j = 1; j < LOG; j++) {
+            for (int i = 1; i <= n; i++) {
+                par[j][i] = par[j - 1][par[j - 1][i]];
             }
-            base = (base * base) % mod;
-            exp /= 2;
         }
-        return result;
+        vector<long long> pow2(n, 1LL);
+        for (int i = 1; i < n; i++) {
+            pow2[i] = pow2[i - 1] * 2LL % MOD;
+        }
+        auto get_lca = [&](int a, int b) -> int {
+            int u = a, v = b;
+            if (depth[u] > depth[v]) swap(u, v);
+            int diff = depth[v] - depth[u];
+            for (int j = 0; j < LOG; j++) {
+                if ((diff >> j) & 1) {
+                    v = par[j][v];
+                }
+            }
+            if (u == v) return u;
+            for (int j = LOG - 1; j >= 0; j--) {
+                if (par[j][u] != par[j][v]) {
+                    u = par[j][u];
+                    v = par[j][v];
+                }
+            }
+            return par[0][u];
+        };
+        vector<int> ans;
+        for (const auto& query : queries) {
+            int u = query[0], v = query[1];
+            int lca_node = get_lca(u, v);
+            int k = depth[u] + depth[v] - 2 * depth[lca_node];
+            int ways = (k == 0) ? 0 : (pow2[k - 1] % MOD);
+            ans.push_back(ways);
+        }
+        return ans;
     }
 };
 # @lc code=end
