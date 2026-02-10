@@ -3,44 +3,35 @@
 #
 # [3217] Delete Nodes From Linked List Present in Array
 #
+
 # @lc code=start
 /**
-* Definition for singly-linked list.
-* struct ListNode {
-*     int val;
-*     ListNode *next;
-*     ListNode() : val(0), next(nullptr) {}
-*     ListNode(int x) : val(x), next(nullptr) {}
-*     ListNode(int x, ListNode *next) : val(x), next(next) {}
-* };
-*/
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        // Convert nums to set for O(1) lookup
-        unordered_set<int> toDelete(nums.begin(), nums.end());
-        
-        // Skip nodes at the beginning that need to be deleted
-        while (head != nullptr && toDelete.count(head->val)) {
-            head = head->next;
-        }
-        
-        // Traverse and remove nodes
-        ListNode* prev = head;
-        ListNode* curr = head->next;
-        
-        while (curr != nullptr) {
-            if (toDelete.count(curr->val)) {
-                // Skip this node
+        unordered_set<int> s(nums.begin(), nums.end());
+        ListNode* dummy = new ListNode(0);
+        dummy->next = head;
+        ListNode* prev = dummy;
+        ListNode* curr = head;
+        while (curr) {
+            if (s.count(curr->val)) {
                 prev->next = curr->next;
             } else {
-                // Move prev forward
                 prev = curr;
             }
             curr = curr->next;
         }
-        
-        return head;
+        return dummy->next;
     }
 };
 # @lc code=end
