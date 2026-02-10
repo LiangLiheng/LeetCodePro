@@ -3,106 +3,59 @@
 #
 # [3695] Maximize Alternating Sum Using Swaps
 #
+
 # @lc code=start
 class Solution {
 public:
-    class UnionFind {
-    public:
-        vector<int> parent, rank;
-        
-        UnionFind(int n) {
-            parent.resize(n);
-            rank.resize(n, 0);
-            for (int i = 0; i < n; i++) {
-                parent[i] = i;
-            }
-        }
-        
-        int find(int x) {
-            if (parent[x] != x) {
-                parent[x] = find(parent[x]);
-            }
-            return parent[x];
-        }
-        
-        void unite(int x, int y) {
-            int px = find(x);
-            int py = find(y);
-            if (px == py) return;
-            
-            if (rank[px] < rank[py]) {
-                parent[px] = py;
-            } else if (rank[px] > rank[py]) {
-                parent[py] = px;
-            } else {
-                parent[py] = px;
-                rank[px]++;
-            }
-        }
-    };
-    
     long long maxAlternatingSum(vector<int>& nums, vector<vector<int>>& swaps) {
         int n = nums.size();
-        UnionFind uf(n);
-        
-        // Build union-find from swaps
-        for (auto& swap : swaps) {
-            uf.unite(swap[0], swap[1]);
-        }
-        
-        // Group indices by their root parent
-        unordered_map<int, vector<int>> components;
-        for (int i = 0; i < n; i++) {
-            components[uf.find(i)].push_back(i);
-        }
-        
-        // Create result array
-        vector<int> result(n);
-        
-        // Process each component
-        for (auto& [root, indices] : components) {
-            // Collect values for this component
-            vector<int> values;
-            for (int idx : indices) {
-                values.push_back(nums[idx]);
+        vector<int> parent(n), rnk(n, 0);
+        for (int i = 0; i < n; ++i) parent[i] = i;
+        auto find = [&](auto&& self, int x) -> int {
+            if (parent[x] != x) {
+                parent[x] = self(self, parent[x]);
             }
-            
-            // Separate indices into even and odd
-            vector<int> evenIndices, oddIndices;
+            return parent[x];
+        };
+        auto uni = [&](int a, int b) {
+            int x = find(find, a);
+            int y = find(find, b);
+            if (x == y) return;
+            if (rnk[x] < rnk[y]) swap(x, y);
+            parent[y] = x;
+            if (rnk[x] == rnk[y]) ++rnk[x];
+        };
+        for (const auto& sw : swaps) {
+            uni(sw[0], sw[1]);
+        }
+        vector<vector<int>> comps(n);
+        for (int i = 0; i < n; ++i) {
+            comps[find(find, i)].push_back(i);
+        }
+        long long ans = 0;
+        for (int i = 0; i < n; ++i) {
+            if (comps[i].empty()) continue;
+            const auto& indices = comps[i];
+            vector<long long> vals;
             for (int idx : indices) {
-                if (idx % 2 == 0) {
-                    evenIndices.push_back(idx);
+                vals.push_back(nums[idx]);
+            }
+            sort(vals.rbegin(), vals.rend());
+            int even_cnt = 0;
+            for (int idx : indices) {
+                if (idx % 2 == 0) ++even_cnt;
+            }
+            long long contrib = 0;
+            for (size_t j = 0; j < vals.size(); ++j) {
+                if (j < even_cnt) {
+                    contrib += vals[j];
                 } else {
-                    oddIndices.push_back(idx);
+                    contrib -= vals[j];
                 }
             }
-            
-            // Sort values in descending order
-            sort(values.begin(), values.end(), greater<int>());
-            
-            // Assign largest values to even indices
-            int valIdx = 0;
-            for (int idx : evenIndices) {
-                result[idx] = values[valIdx++];
-            }
-            
-            // Assign remaining values to odd indices
-            for (int idx : oddIndices) {
-                result[idx] = values[valIdx++];
-            }
+            ans += contrib;
         }
-        
-        // Calculate alternating sum
-        long long sum = 0;
-        for (int i = 0; i < n; i++) {
-            if (i % 2 == 0) {
-                sum += result[i];
-            } else {
-                sum -= result[i];
-            }
-        }
-        
-        return sum;
+        return ans;
     }
 };
 # @lc code=end
