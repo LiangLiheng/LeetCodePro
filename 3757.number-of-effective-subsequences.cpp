@@ -3,68 +3,59 @@
 #
 # [3757] Number of Effective Subsequences
 #
-#include <vector>
-#include <set>
-using namespace std;
 
 # @lc code=start
 class Solution {
 public:
     int countEffective(vector<int>& nums) {
-        const int MOD = 1e9 + 7;
         int n = nums.size();
-        
-        // Calculate total OR
-        int totalOR = 0;
-        for (int num : nums) {
-            totalOR |= num;
-        }
-        
-        if (totalOR == 0) return 0;
-        
-        // Find which bits are set in totalOR
+        long long full_or = 0;
+        for (int x : nums) full_or |= x;
         vector<int> bits;
-        for (int b = 0; b < 20; b++) {  // nums[i] <= 10^6 < 2^20
-            if (totalOR & (1 << b)) {
-                bits.push_back(b);
-            }
+        for (int b = 0; b < 20; b++) {
+            if (full_or & (1 << b)) bits.push_back(b);
         }
-        
-        int numBits = bits.size();
-        long long answer = 0;
-        
-        // Inclusion-exclusion over all non-empty subsets of bits
-        for (int mask = 1; mask < (1 << numBits); mask++) {
-            // Find union of elements having any of the selected bits
-            set<int> unionIndices;
-            for (int i = 0; i < numBits; i++) {
+        int k = bits.size();
+        if (k == 0) return 0;
+        int max_mask = 1 << k;
+        vector<long long> freq(max_mask, 0);
+        for (int x : nums) {
+            int proj = 0;
+            for (int j = 0; j < k; j++) {
+                if (x & (1 << bits[j])) proj |= (1 << j);
+            }
+            freq[proj]++;
+        }
+        vector<long long> subset_sum = freq;
+        for (int i = 0; i < k; i++) {
+            for (int mask = 0; mask < max_mask; mask++) {
                 if (mask & (1 << i)) {
-                    int bit = bits[i];
-                    for (int j = 0; j < n; j++) {
-                        if (nums[j] & (1 << bit)) {
-                            unionIndices.insert(j);
-                        }
-                    }
+                    subset_sum[mask] += subset_sum[mask ^ (1 << i)];
                 }
             }
-            
-            // Count subsequences that include all these elements
-            int sizeUnion = unionIndices.size();
-            long long count = 1;
-            for (int i = 0; i < n - sizeUnion; i++) {
-                count = (count * 2) % MOD;
-            }
-            
-            // Apply inclusion-exclusion
-            int popcount = __builtin_popcount(mask);
-            if (popcount % 2 == 1) {
-                answer = (answer + count) % MOD;
-            } else {
-                answer = (answer - count + MOD) % MOD;
-            }
         }
-        
-        return answer;
+        const long long MOD = 1000000007LL;
+        auto modpow = [&](long long base, long long exp) -> long long {
+            long long res = 1;
+            base %= MOD;
+            while (exp > 0) {
+                if (exp & 1) res = res * base % MOD;
+                base = base * base % MOD;
+                exp >>= 1;
+            }
+            return res;
+        };
+        long long ans = 0;
+        int ALL = (1 << k) - 1;
+        for (int sub = 1; sub < max_mask; sub++) {
+            int comp = ALL ^ sub;
+            long long num_free = subset_sum[comp];
+            long long ways = modpow(2LL, num_free);
+            int pop = __builtin_popcount(sub);
+            long long sign = (pop % 2 == 1) ? 1LL : (MOD - 1LL);
+            ans = (ans + sign * ways % MOD) % MOD;
+        }
+        return (int) ans;
     }
 };
 # @lc code=end
