@@ -7,39 +7,56 @@
 class Solution {
 public:
     long long minInversionCount(vector<int>& nums, int k) {
+        struct FenwickTree {
+            vector<long long> tree;
+            int sz;
+            FenwickTree(int n) : sz(n), tree(n + 2, 0LL) {}
+            void update(int idx, long long val) {
+                while (idx <= sz) {
+                    tree[idx] += val;
+                    idx += idx & -idx;
+                }
+            }
+            long long query(int idx) {
+                long long sum = 0;
+                idx = min(idx, sz);
+                while (idx > 0) {
+                    sum += tree[idx];
+                    idx -= idx & -idx;
+                }
+                return sum;
+            }
+            long long query(int l, int r) {
+                return query(r) - query(l - 1);
+            }
+        };
         int n = nums.size();
-        if (k == 1) return 0;
-        
-        // Calculate inversions for the first window
-        long long current = 0;
-        multiset<int> window;
-        
-        for (int i = 0; i < k; i++) {
-            // Count how many elements in window are greater than nums[i]
-            current += distance(window.upper_bound(nums[i]), window.end());
-            window.insert(nums[i]);
+        vector<int> vals = nums;
+        sort(vals.begin(), vals.end());
+        vals.erase(unique(vals.begin(), vals.end()), vals.end());
+        int max_rank = vals.size();
+        FenwickTree ft(max_rank);
+        auto get_rank = [&](int x) -> int {
+            return lower_bound(vals.begin(), vals.end(), x) - vals.begin() + 1;
+        };
+        long long ans = LLONG_MAX;
+        long long cur_inv = 0;
+        for (int i = 0; i < k; ++i) {
+            int r = get_rank(nums[i]);
+            cur_inv += ft.query(r + 1, max_rank);
+            ft.update(r, 1LL);
         }
-        
-        long long minInv = current;
-        
-        // Slide the window
-        for (int i = k; i < n; i++) {
-            // Remove nums[i-k]
-            int removed = nums[i - k];
-            // Count smaller elements in the remaining window
-            current -= distance(window.begin(), window.lower_bound(removed));
-            window.erase(window.find(removed));
-            
-            // Add nums[i]
-            int added = nums[i];
-            // Count larger elements in the current window
-            current += distance(window.upper_bound(added), window.end());
-            window.insert(added);
-            
-            minInv = min(minInv, current);
+        ans = cur_inv;
+        for (int i = k; i < n; ++i) {
+            int r = get_rank(nums[i]);
+            cur_inv += ft.query(r + 1, max_rank);
+            ft.update(r, 1LL);
+            int l = get_rank(nums[i - k]);
+            cur_inv -= ft.query(1, l - 1);
+            ft.update(l, -1LL);
+            ans = min(ans, cur_inv);
         }
-        
-        return minInv;
+        return ans;
     }
 };
 # @lc code=end
