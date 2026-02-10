@@ -6,17 +6,17 @@
 # @lc code=start
 class Solution {
 public:
-    int commonPrefixLength(const string& s1, const string& s2) {
-        int len = min(s1.length(), s2.length());
-        int count = 0;
-        for (int i = 0; i < len; i++) {
+    int computeLCP(const string& s1, const string& s2) {
+        int len = 0;
+        int minLen = min(s1.length(), s2.length());
+        for (int i = 0; i < minLen; i++) {
             if (s1[i] == s2[i]) {
-                count++;
+                len++;
             } else {
                 break;
             }
         }
-        return count;
+        return len;
     }
     
     vector<int> longestCommonPrefix(vector<string>& words) {
@@ -24,33 +24,33 @@ public:
         vector<int> answer(n, 0);
         
         if (n <= 1) {
-            return answer; // No adjacent pairs possible
+            return answer;
         }
         
-        // Pre-compute prefix lengths for all adjacent pairs
-        vector<int> prefixLen(n - 1);
+        // Precompute LCP for all adjacent pairs
+        vector<int> lcp(n - 1);
         for (int i = 0; i < n - 1; i++) {
-            prefixLen[i] = commonPrefixLength(words[i], words[i + 1]);
+            lcp[i] = computeLCP(words[i], words[i + 1]);
         }
         
-        for (int removeIdx = 0; removeIdx < n; removeIdx++) {
-            int maxLen = 0;
+        // For each removal
+        for (int i = 0; i < n; i++) {
+            int maxLCP = 0;
             
-            // Check all original pairs except those involving removeIdx
-            for (int pairIdx = 0; pairIdx < n - 1; pairIdx++) {
-                if (pairIdx == removeIdx || pairIdx + 1 == removeIdx) {
-                    continue; // This pair involves the removed element
+            // Check all existing pairs that don't involve index i
+            for (int j = 0; j < n - 1; j++) {
+                if (j != i - 1 && j != i) {
+                    maxLCP = max(maxLCP, lcp[j]);
                 }
-                maxLen = max(maxLen, prefixLen[pairIdx]);
             }
             
-            // If we remove a middle element, we get a new pair
-            if (removeIdx > 0 && removeIdx < n - 1) {
-                int newPairLen = commonPrefixLength(words[removeIdx - 1], words[removeIdx + 1]);
-                maxLen = max(maxLen, newPairLen);
+            // Check new pair if both neighbors exist
+            if (i > 0 && i < n - 1) {
+                int newLCP = computeLCP(words[i - 1], words[i + 1]);
+                maxLCP = max(maxLCP, newLCP);
             }
             
-            answer[removeIdx] = maxLen;
+            answer[i] = maxLCP;
         }
         
         return answer;
