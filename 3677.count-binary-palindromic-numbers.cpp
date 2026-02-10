@@ -3,88 +3,73 @@
 #
 # [3677] Count Binary Palindromic Numbers
 #
-
 # @lc code=start
 class Solution {
 public:
     int countBinaryPalindromes(long long n) {
         if (n == 0) return 1;
         
-        // Find bit length of n
-        int maxLen = 0;
-        long long temp = n;
-        while (temp > 0) {
-            maxLen++;
-            temp >>= 1;
-        }
-        
         int count = 0;
         
-        // Count palindromes with length < maxLen
-        if (maxLen > 1) {
-            count += 2; // Length 1: "0" and "1"
-            
-            // For each length from 2 to maxLen-1
-            for (int len = 2; len < maxLen; len++) {
-                if (len % 2 == 0) {
-                    // Even length: 2^(len/2-1) palindromes
-                    count += (1 << (len / 2 - 1));
-                } else {
-                    // Odd length: 2^((len-1)/2) palindromes
-                    count += (1 << ((len - 1) / 2));
-                }
+        // Find bit length of n
+        int bit_len = 64 - __builtin_clzll(n);
+        
+        // Count length 1: "0" and "1"
+        count = 2;
+        
+        // Count lengths 2 to bit_len - 1
+        for (int len = 2; len < bit_len; len++) {
+            if (len % 2 == 1) {
+                // Odd length: 2^((len-1)/2) palindromes
+                count += (1 << ((len - 1) / 2));
+            } else {
+                // Even length: 2^(len/2-1) palindromes
+                count += (1 << (len / 2 - 1));
             }
         }
         
-        // Count palindromes with length == maxLen and value <= n
-        if (maxLen == 1) {
-            count = n + 1; // Both 0 and 1 (or just 0 if n=0, handled above)
-        } else {
-            count += countPalindromesOfLength(maxLen, n);
-        }
+        // Count palindromes of length bit_len that are <= n
+        count += countPalindromesOfLengthLE(bit_len, n);
         
         return count;
     }
     
 private:
-    // Count palindromes of specific length that are <= maxVal
-    int countPalindromesOfLength(int len, long long maxVal) {
-        bool isOdd = (len % 2 == 1);
-        int halfLen = isOdd ? (len + 1) / 2 : len / 2;
+    int countPalindromesOfLengthLE(int len, long long n) {
+        int count = 0;
+        int half_len = (len + 1) / 2;
         
-        long long minHalf = 1LL << (halfLen - 1); // Minimum half (first bit is 1)
-        long long maxHalf = (1LL << halfLen) - 1; // Maximum half
+        // Generate all possible first halves
+        long long start = 1LL << (half_len - 1);
+        long long end = 1LL << half_len;
         
-        // Binary search for the maximum valid half
-        long long left = minHalf, right = maxHalf;
-        long long result = minHalf - 1;
-        
-        while (left <= right) {
-            long long mid = left + (right - left) / 2;
-            long long palindrome = createPalindrome(mid, isOdd);
-            
-            if (palindrome <= maxVal) {
-                result = mid;
-                left = mid + 1;
+        for (long long half = start; half < end; half++) {
+            long long palindrome = makePalindrome(half, len);
+            if (palindrome <= n) {
+                count++;
             } else {
-                right = mid - 1;
+                break; // Palindromes are in increasing order
             }
         }
         
-        if (result < minHalf) return 0;
-        return (int)(result - minHalf + 1);
+        return count;
     }
     
-    // Create palindrome from first half
-    long long createPalindrome(long long half, bool isOdd) {
+    long long makePalindrome(long long half, int len) {
         long long result = half;
-        if (isOdd) half >>= 1; // Skip middle bit for odd length
+        long long temp = half;
+        
+        // Skip middle bit for odd length
+        if (len % 2 == 1) {
+            temp >>= 1;
+        }
         
         // Mirror the remaining bits
-        while (half > 0) {
-            result = (result << 1) | (half & 1);
-            half >>= 1;
+        while (temp > 0) {
+            result = (result << 1) | (temp & 1);
+            temp >>= 1;
         }
+        
         return result;
     }
 };
