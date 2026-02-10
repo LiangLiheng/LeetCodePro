@@ -1,19 +1,76 @@
-{
-    "reasoning": "Step 1: Problem Analysis - This is a 'maximize the minimum' problem where we want the largest possible value for the minimum Manhattan distance between any pair of selected points. This type of optimization problem typically suggests binary search on the answer space.
-
-Step 2: Algorithm Validation - Binary search works here because of the monotonic property: if we can select k points with minimum distance d, we can also select k points with minimum distance d-1 (or any smaller value). We need to verify this property holds: selecting points with stricter distance requirements is harder than selecting with looser requirements, confirming monotonicity.
-
-Step 3: Feasibility Check Method - For each candidate minimum distance d during binary search, we must determine if k points can be selected such that all pairwise distances are at least d. This is equivalent to finding an independent set of size k in a graph where edges connect points with distance < d. Use backtracking with pruning to explore point combinations.
-
-Step 4: Complexity Feasibility Analysis - With k ≤ 25 and points.length ≤ 15000, naive backtracking could explore 2^n combinations. However, the pruning optimization (stopping when remaining points + selected < k) and early termination significantly reduce the search space in practice. The binary search adds log(2*side) iterations, making this approach feasible.
-
-Step 5: Verification Against Examples - Test the approach with Example 1: side=2, points=[[0,2],[2,0],[2,2],[0,0]], k=4. The algorithm should binary search the range [0, 4], find that all 4 points can be selected with minimum distance 2 (each pair of points has distance exactly 2), matching the expected output of 2.
-
-Step 6: Edge Case Consideration - When k equals points.length, all points must be selected, so the answer is the minimum distance among all point pairs. When points are clustered closely, the maximum possible minimum distance will be small. When k is small, more flexibility exists in point selection, potentially allowing larger minimum distances.
-
-Step 7: Implementation Details - Use manhattan distance calculation helper. Backtracking recursively tries selecting or skipping each point, checking distance constraints against already selected points. Include pruning: if remaining points + currently selected < k, return false immediately. Binary search finds the maximum d for which k points can be selected.
-
-Time Complexity: O(log(side) * 2^n) with significant practical pruning.
-Space Complexity: O(k) for recursion stack and selected points vector.",
-    "result": "#\n# @lc app=leetcode id=3464 lang=cpp\n#\n# [3464] Maximize the Distance Between Points on a Square\n#\n# @lc code=start\nclass Solution {\npublic:\n    int manhattanDistance(const vector<int>& p1, const vector<int>& p2) {\n        return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]);\n    }\n    \n    bool backtrack(const vector<vector<int>>& points, int k, int d, \n                   vector<int>& selected, int index) {\n        if ((int)selected.size() == k) {\n            return true;\n        }\n        \n        if (index >= (int)points.size()) {\n            return false;\n        }\n        \n        int remaining = (int)points.size() - index;\n        if ((int)selected.size() + remaining < k) {\n            return false;\n        }\n        \n        bool canAdd = true;\n        for (int idx : selected) {\n            if (manhattanDistance(points[index], points[idx]) < d) {\n                canAdd = false;\n                break;\n            }\n        }\n        \n        if (canAdd) {\n            selected.push_back(index);\n            if (backtrack(points, k, d, selected, index + 1)) {\n                return true;\n            }\n            selected.pop_back();\n        }\n        \n        return backtrack(points, k, d, selected, index + 1);\n    }\n    \n    bool canSelectK(const vector<vector<int>>& points, int k, int d) {\n        vector<int> selected;\n        return backtrack(points, k, d, selected, 0);\n    }\n    \n    int maxDistance(int side, vector<vector<int>>& points, int k) {\n        int left = 0, right = 2 * side;\n        int result = 0;\n        \n        while (left <= right) {\n            int mid = left + (right - left) / 2;\n            if (canSelectK(points, k, mid)) {\n                result = mid;\n                left = mid + 1;\n            } else {\n                right = mid - 1;\n            }\n        }\n        \n        return result;\n    }\n};\n# @lc code=end"
-}
+#
+# @lc app=leetcode id=3464 lang=cpp
+#
+# [3464] Maximize the Distance Between Points on a Square
+#
+# @lc code=start
+class Solution {
+public:
+    int maxDistance(int side, vector<vector<int>>& points, int k) {
+        int n = points.size();
+        
+        // Precompute all pairwise Manhattan distances
+        vector<vector<int>> dist(n, vector<int>(n));
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                dist[i][j] = dist[j][i] = abs(points[i][0] - points[j][0]) + abs(points[i][1] - points[j][1]);
+            }
+        }
+        
+        // Binary search on the answer
+        int left = 0, right = 4 * side;
+        int result = 0;
+        
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (canSelect(n, k, mid, dist)) {
+                result = mid;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return result;
+    }
+    
+private:
+    bool canSelect(int n, int k, int minDist, vector<vector<int>>& dist) {
+        vector<int> selected;
+        return backtrack(n, k, minDist, 0, selected, dist);
+    }
+    
+    bool backtrack(int n, int k, int minDist, int start, vector<int>& selected, vector<vector<int>>& dist) {
+        if (selected.size() == k) {
+            return true;
+        }
+        
+        // Pruning: not enough remaining points
+        if (n - start + selected.size() < k) {
+            return false;
+        }
+        
+        for (int i = start; i < n; i++) {
+            bool valid = true;
+            
+            // Check if point i is valid (distance >= minDist from all selected points)
+            for (int idx : selected) {
+                if (dist[i][idx] < minDist) {
+                    valid = false;
+                    break;
+                }
+            }
+            
+            if (valid) {
+                selected.push_back(i);
+                if (backtrack(n, k, minDist, i + 1, selected, dist)) {
+                    return true;
+                }
+                selected.pop_back();
+            }
+        }
+        
+        return false;
+    }
+};
+# @lc code=end
