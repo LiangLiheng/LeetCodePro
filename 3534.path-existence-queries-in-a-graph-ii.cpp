@@ -3,73 +3,88 @@
 #
 # [3534] Path Existence Queries in a Graph II
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> pathExistenceQueries(int n, vector<int>& nums, int maxDiff, vector<vector<int>>& queries) {
-        // Build adjacency list
-        vector<vector<int>> graph(n);
-        
-        // Sort nodes by their values to optimize edge finding
-        vector<pair<int, int>> sorted_nodes; // {value, index}
-        for (int i = 0; i < n; i++) {
-            sorted_nodes.push_back({nums[i], i});
+        vector<pair<int, int>> nodes(n);
+        for (int i = 0; i < n; ++i) {
+            nodes[i] = {nums[i], i};
         }
-        sort(sorted_nodes.begin(), sorted_nodes.end());
-        
-        // Build edges efficiently
-        for (int i = 0; i < n; i++) {
-            int idx1 = sorted_nodes[i].second;
-            int val1 = sorted_nodes[i].first;
-            
-            // Check forward in sorted order
-            for (int j = i + 1; j < n; j++) {
-                int idx2 = sorted_nodes[j].second;
-                int val2 = sorted_nodes[j].first;
-                
-                if (val2 - val1 > maxDiff) break;
-                
-                graph[idx1].push_back(idx2);
-                graph[idx2].push_back(idx1);
+        sort(nodes.begin(), nodes.end());
+        vector<int> sorted_pos(n);
+        for (int j = 0; j < n; ++j) {
+            sorted_pos[nodes[j].second] = j;
+        }
+        vector<int> comp_id(n);
+        if (n > 0) {
+            comp_id[0] = 0;
+            int cur_comp = 0;
+            for (int i = 1; i < n; ++i) {
+                if ((long long)nodes[i].first - nodes[i - 1].first > maxDiff) {
+                    ++cur_comp;
+                }
+                comp_id[i] = cur_comp;
             }
         }
-        
+        // Compute r[i]
+        vector<int> r(n);
+        int cur_right = 0;
+        for (int i = 0; i < n; ++i) {
+            while (cur_right < n && (long long)nodes[cur_right].first - nodes[i].first <= maxDiff) {
+                ++cur_right;
+            }
+            r[i] = cur_right - 1;
+        }
+        // Binary lifting
+        const int LOG = 18;
+        vector<vector<int>> jump(n, vector<int>(LOG));
+        for (int i = 0; i < n; ++i) {
+            jump[i][0] = r[i];
+        }
+        for (int b = 1; b < LOG; ++b) {
+            for (int i = 0; i < n; ++i) {
+                int mid = jump[i][b - 1];
+                jump[i][b] = jump[mid][b - 1];
+            }
+        }
         // Process queries
-        vector<int> answer;
-        for (auto& query : queries) {
-            int u = query[0];
-            int v = query[1];
-            
+        int qn = queries.size();
+        vector<int> answer(qn);
+        auto compute_reach = [&](int start, int jumps) -> int {
+            int pos = start;
+            for (int b = LOG - 1; b >= 0; --b) {
+                if (jumps & (1 << b)) {
+                    pos = jump[pos][b];
+                }
+            }
+            return pos;
+        };
+        for (int qi = 0; qi < qn; ++qi) {
+            int u = queries[qi][0], v = queries[qi][1];
             if (u == v) {
-                answer.push_back(0);
+                answer[qi] = 0;
                 continue;
             }
-            
-            // BFS to find shortest path
-            vector<int> dist(n, -1);
-            queue<int> q;
-            q.push(u);
-            dist[u] = 0;
-            
-            while (!q.empty()) {
-                int curr = q.front();
-                q.pop();
-                
-                if (curr == v) {
-                    break;
-                }
-                
-                for (int neighbor : graph[curr]) {
-                    if (dist[neighbor] == -1) {
-                        dist[neighbor] = dist[curr] + 1;
-                        q.push(neighbor);
-                    }
+            int pu = sorted_pos[u], pv = sorted_pos[v];
+            if (pu > pv) swap(pu, pv);
+            if (comp_id[pu] != comp_id[pv]) {
+                answer[qi] = -1;
+                continue;
+            }
+            // Binary search min k
+            int lo = 1, hi = pv - pu;
+            while (lo < hi) {
+                int mid = lo + (hi - lo) / 2;
+                if (compute_reach(pu, mid) >= pv) {
+                    hi = mid;
+                } else {
+                    lo = mid + 1;
                 }
             }
-            
-            answer.push_back(dist[v]);
+            answer[qi] = lo;
         }
-        
         return answer;
     }
 };
