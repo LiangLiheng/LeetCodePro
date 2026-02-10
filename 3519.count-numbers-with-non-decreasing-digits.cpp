@@ -3,93 +3,101 @@
 #
 # [3519] Count Numbers with Non-Decreasing Digits
 #
+
 # @lc code=start
 class Solution {
 public:
     int countNumbers(string l, string r, int b) {
-        const int MOD = 1e9 + 7;
-        
-        // Convert decimal string to base b digits
-        auto toBase = [&](string num) {
-            vector<int> result;
-            while (!num.empty() && num != "0") {
-                int remainder = 0;
-                string next = "";
-                for (char c : num) {
-                    int digit = remainder * 10 + (c - '0');
-                    if (!next.empty() || digit / b > 0) {
-                        next += char('0' + digit / b);
-                    }
-                    remainder = digit % b;
-                }
-                result.push_back(remainder);
-                num = next;
+        const long long MOD = 1000000007LL;
+        auto mod_pow = [&](long long a, long long e) -> long long {
+            long long res = 1;
+            a %= MOD;
+            while (e > 0) {
+                if (e & 1) res = res * a % MOD;
+                a = a * a % MOD;
+                e >>= 1;
             }
-            if (result.empty()) result.push_back(0);
-            reverse(result.begin(), result.end());
-            return result;
+            return res;
         };
-        
-        // Digit DP to count numbers with non-decreasing digits
-        auto countUpTo = [&](vector<int>& digits) -> long long {
-            int n = digits.size();
-            map<tuple<int, int, bool, bool>, long long> memo;
-            
-            function<long long(int, int, bool, bool)> dp = [&](int pos, int prev, bool tight, bool started) -> long long {
-                if (pos == n) {
-                    return started ? 1 : 0;
+        auto decrement_str = [&](string s) -> string {
+            string res = s;
+            int n = res.size();
+            int i = n - 1;
+            while (i >= 0) {
+                if (res[i] > '0') {
+                    res[i]--;
+                    break;
                 }
-                
-                auto key = make_tuple(pos, prev, tight, started);
-                if (memo.count(key)) return memo[key];
-                
-                int limit = tight ? digits[pos] : (b - 1);
-                long long res = 0;
-                
-                for (int d = 0; d <= limit; d++) {
-                    if (started && d < prev) continue;
-                    
-                    bool newStarted = started || (d > 0);
-                    bool newTight = tight && (d == limit);
-                    int newPrev = newStarted ? d : 0;
-                    
-                    res = (res + dp(pos + 1, newPrev, newTight, newStarted)) % MOD;
-                }
-                
-                return memo[key] = res;
-            };
-            
-            return dp(0, 0, true, false);
-        };
-        
-        // Subtract 1 from string
-        auto subtract1 = [](string num) -> string {
-            int i = num.size() - 1;
-            while (i >= 0 && num[i] == '0') {
-                num[i] = '9';
+                res[i] = '9';
                 i--;
             }
-            if (i >= 0) {
-                num[i]--;
-            }
-            size_t start = num.find_first_not_of('0');
-            if (start == string::npos) return "0";
-            return num.substr(start);
+            size_t start = 0;
+            while (start < res.size() && res[start] == '0') ++start;
+            if (start == res.size()) return "0";
+            return res.substr(start);
         };
-        
-        // Count for r
-        vector<int> rDigits = toBase(r);
-        long long countR = countUpTo(rDigits);
-        
-        // Count for l-1
-        string lMinus1 = subtract1(l);
-        long long countL = 0;
-        if (lMinus1 != "0") {
-            vector<int> lDigits = toBase(lMinus1);
-            countL = countUpTo(lDigits);
-        }
-        
-        return (countR - countL + MOD) % MOD;
+        auto get_base_digits = [&](string num, int base_b) -> vector<int> {
+            vector<int> digs;
+            while (num != "0") {
+                int rem = 0;
+                string nextn = "";
+                bool lead = true;
+                for (char ch : num) {
+                    int dgt = ch - '0';
+                    int tempv = rem * 10 + dgt;
+                    int q = tempv / base_b;
+                    rem = tempv % base_b;
+                    if (q != 0 || !lead) {
+                        nextn += '0' + q;
+                        lead = false;
+                    }
+                }
+                if (nextn.empty()) nextn = "0";
+                digs.push_back(rem);
+                num = nextn;
+            }
+            reverse(digs.begin(), digs.end());
+            if (digs.empty()) digs = {0};
+            return digs;
+        };
+        auto solve = [&](string num_str, int base_b) -> long long {
+            if (num_str == "0") return 0LL;
+            vector<int> digits = get_base_digits(num_str, base_b);
+            int LL = digits.size();
+            const int MAXF = 400;
+            vector<long long> fact(MAXF + 1, 1LL);
+            for (int i = 1; i <= MAXF; ++i) {
+                fact[i] = fact[i - 1] * i % MOD;
+            }
+            auto combi = [&](int nn, int kk) -> long long {
+                if (kk < 0 || kk > nn) return 0LL;
+                return fact[nn] * mod_pow(fact[kk], MOD - 2) % MOD * mod_pow(fact[nn - kk], MOD - 2) % MOD;
+            };
+            int mm = base_b - 1;
+            long long smalll = 0;
+            for (int kk = 1; kk < LL; ++kk) {
+                smalll = (smalll + combi(kk + mm - 1, kk)) % MOD;
+            }
+            vector<vector<vector<long long>>> mem(LL + 1, vector<vector<long long>>(base_b + 1, vector<long long>(2, -1LL)));
+            auto dfs = [&](auto&& self, int pos, int preev, int tiig) -> long long {
+                if (pos == LL) return 1LL;
+                if (mem[pos][preev][tiig] != -1LL) return mem[pos][preev][tiig];
+                long long resu = 0;
+                int upp = tiig ? digits[pos] : base_b - 1;
+                int loww = (preev == 0 ? 1 : preev);
+                for (int dd = loww; dd <= upp; ++dd) {
+                    int new_tiig = tiig && (dd == upp);
+                    resu = (resu + self(self, pos + 1, dd, new_tiig)) % MOD;
+                }
+                mem[pos][preev][tiig] = resu;
+                return resu;
+            };
+            long long samelen = dfs(dfs, 0, 0, 1);
+            return (smalll + samelen) % MOD;
+        };
+        string lmi = decrement_str(l);
+        long long anss = (solve(r, b) - solve(lmi, b) + MOD) % MOD;
+        return static_cast<int>(anss);
     }
 };
 # @lc code=end
