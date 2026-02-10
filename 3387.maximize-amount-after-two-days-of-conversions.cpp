@@ -7,84 +7,67 @@
 class Solution {
 public:
     double maxAmount(string initialCurrency, vector<vector<string>>& pairs1, vector<double>& rates1, vector<vector<string>>& pairs2, vector<double>& rates2) {
-        // Build bidirectional graphs for both days
-        unordered_map<string, vector<pair<string, double>>> graph1, graph2;
-        
-        // Day 1: add edges in both directions
+        // Build graph for day 1
+        unordered_map<string, vector<pair<string, double>>> graph1;
         for (int i = 0; i < pairs1.size(); i++) {
-            string from = pairs1[i][0], to = pairs1[i][1];
-            double rate = rates1[i];
-            graph1[from].push_back({to, rate});
-            graph1[to].push_back({from, 1.0 / rate});
+            graph1[pairs1[i][0]].push_back({pairs1[i][1], rates1[i]});
+            graph1[pairs1[i][1]].push_back({pairs1[i][0], 1.0 / rates1[i]});
         }
         
-        // Day 2: add edges in both directions
+        // Find max amounts for all currencies after day 1
+        unordered_map<string, double> afterDay1 = findMaxAmounts(initialCurrency, graph1);
+        
+        // Build graph for day 2
+        unordered_map<string, vector<pair<string, double>>> graph2;
         for (int i = 0; i < pairs2.size(); i++) {
-            string from = pairs2[i][0], to = pairs2[i][1];
-            double rate = rates2[i];
-            graph2[from].push_back({to, rate});
-            graph2[to].push_back({from, 1.0 / rate});
+            graph2[pairs2[i][0]].push_back({pairs2[i][1], rates2[i]});
+            graph2[pairs2[i][1]].push_back({pairs2[i][0], 1.0 / rates2[i]});
         }
         
-        // Find maximum amounts reachable on Day 1 from initialCurrency
-        unordered_map<string, double> day1Max = findMaxConversions(graph1, initialCurrency);
+        // For each currency after day 1, find max path back to initialCurrency
+        double maxResult = 1.0; // At minimum we can stay at initialCurrency
         
-        // Collect all currencies from both graphs
-        unordered_set<string> allCurrencies;
-        allCurrencies.insert(initialCurrency);
-        for (auto& p : graph1) allCurrencies.insert(p.first);
-        for (auto& p : graph2) allCurrencies.insert(p.first);
-        
-        // Try each intermediate currency and find maximum
-        double maxResult = 1.0;
-        
-        for (const string& intermediateCurrency : allCurrencies) {
-            // Amount of intermediate currency after Day 1
-            double amountAfterDay1 = day1Max.count(intermediateCurrency) ? day1Max[intermediateCurrency] : 0.0;
+        for (auto& [currency, amount] : afterDay1) {
+            // Find max conversion from currency back to initialCurrency on day 2
+            unordered_map<string, double> afterDay2 = findMaxAmounts(currency, graph2);
             
-            // Find maximum amount of initialCurrency starting from intermediate currency on Day 2
-            unordered_map<string, double> day2Max = findMaxConversions(graph2, intermediateCurrency);
-            double conversionBackRate = day2Max.count(initialCurrency) ? day2Max[initialCurrency] : 0.0;
-            
-            // Update maximum result
-            maxResult = max(maxResult, amountAfterDay1 * conversionBackRate);
+            if (afterDay2.count(initialCurrency)) {
+                maxResult = max(maxResult, amount * afterDay2[initialCurrency]);
+            }
         }
         
         return maxResult;
     }
     
 private:
-    // Find maximum conversion amounts from start currency using given graph
-    unordered_map<string, double> findMaxConversions(unordered_map<string, vector<pair<string, double>>>& graph, string start) {
-        unordered_map<string, double> maxAmount;
-        maxAmount[start] = 1.0;
+    unordered_map<string, double> findMaxAmounts(string start, unordered_map<string, vector<pair<string, double>>>& graph) {
+        unordered_map<string, double> maxAmounts;
+        maxAmounts[start] = 1.0;
         
+        // Use BFS with priority queue (max heap) to explore maximum amounts
         priority_queue<pair<double, string>> pq;
         pq.push({1.0, start});
         
         while (!pq.empty()) {
-            auto [currentAmount, currentCurrency] = pq.top();
+            auto [amount, curr] = pq.top();
             pq.pop();
             
-            // Skip if we've already found a better path
-            if (currentAmount < maxAmount[currentCurrency]) continue;
+            // If we've already found a better path, skip
+            if (amount < maxAmounts[curr]) continue;
             
-            // Skip if no outgoing edges
-            if (graph.find(currentCurrency) == graph.end()) continue;
-            
-            // Explore all conversions from current currency
-            for (auto& [nextCurrency, conversionRate] : graph[currentCurrency]) {
-                double newAmount = maxAmount[currentCurrency] * conversionRate;
-                
-                // Update if we found a better conversion path
-                if (maxAmount.find(nextCurrency) == maxAmount.end() || newAmount > maxAmount[nextCurrency]) {
-                    maxAmount[nextCurrency] = newAmount;
-                    pq.push({newAmount, nextCurrency});
+            // Explore neighbors
+            if (graph.count(curr)) {
+                for (auto& [next, rate] : graph[curr]) {
+                    double newAmount = amount * rate;
+                    if (newAmount > maxAmounts[next]) {
+                        maxAmounts[next] = newAmount;
+                        pq.push({newAmount, next});
+                    }
                 }
             }
         }
         
-        return maxAmount;
+        return maxAmounts;
     }
 };
 # @lc code=end
