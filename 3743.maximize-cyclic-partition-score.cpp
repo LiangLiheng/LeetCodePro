@@ -3,61 +3,63 @@
 #
 # [3743] Maximize Cyclic Partition Score
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maximumScore(vector<int>& nums, int k) {
         int n = nums.size();
-        long long maxScore = 0;
-        
-        // Try all starting positions to handle cyclic nature
-        for (int start = 0; start < n; start++) {
-            // Create rotated array
-            vector<int> rotated(n);
-            for (int i = 0; i < n; i++) {
-                rotated[i] = nums[(start + i) % n];
+        vector<int> ext(2 * n);
+        for (int i = 0; i < n; ++i) {
+            ext[i] = nums[i];
+            ext[n + i] = nums[i];
+        }
+        int N = 2 * n;
+        // Sparse table for max and min
+        int LOG = 0;
+        while ((1 << LOG) <= N) ++LOG;
+        vector<vector<int>> st_max(LOG, vector<int>(N));
+        vector<vector<int>> st_min(LOG, vector<int>(N));
+        for (int i = 0; i < N; ++i) {
+            st_max[0][i] = ext[i];
+            st_min[0][i] = ext[i];
+        }
+        for (int lv = 1; lv < LOG; ++lv) {
+            for (int i = 0; i + (1 << lv) <= N; ++i) {
+                st_max[lv][i] = max(st_max[lv - 1][i], st_max[lv - 1][i + (1 << (lv - 1))]);
+                st_min[lv][i] = min(st_min[lv - 1][i], st_min[lv - 1][i + (1 << (lv - 1))]);
             }
-            
-            // Precompute ranges for all subarrays [i, j]
-            vector<vector<long long>> range(n, vector<long long>(n, 0));
-            for (int i = 0; i < n; i++) {
-                int minVal = rotated[i], maxVal = rotated[i];
-                for (int j = i; j < n; j++) {
-                    minVal = min(minVal, rotated[j]);
-                    maxVal = max(maxVal, rotated[j]);
-                    range[i][j] = maxVal - minVal;
-                }
-            }
-            
-            // dp[i][j] = max score partitioning first i+1 elements into exactly j parts
-            vector<vector<long long>> dp(n, vector<long long>(k + 1, -1));
-            
-            // Base case: 1 partition
-            for (int i = 0; i < n; i++) {
-                dp[i][1] = range[0][i];
-            }
-            
-            // Fill DP table
-            for (int i = 1; i < n; i++) {
-                for (int j = 2; j <= min(i + 1, k); j++) {
-                    // Try all split points
-                    for (int p = j - 2; p < i; p++) {
-                        if (dp[p][j - 1] != -1) {
-                            dp[i][j] = max(dp[i][j], dp[p][j - 1] + range[p + 1][i]);
-                        }
+        }
+        auto query_max = [&](int L, int R) -> int {
+            int len = R - L;
+            int lv = 31 - __builtin_clz(len);
+            return max(st_max[lv][L], st_max[lv][R - (1 << lv)]);
+        };
+        auto query_min = [&](int L, int R) -> int {
+            int len = R - L;
+            int lv = 31 - __builtin_clz(len);
+            return min(st_min[lv][L], st_min[lv][R - (1 << lv)]);
+        };
+        int maxk = min(k, n);
+        vector<long long> prev_dp(N + 1, LLONG_MIN / 2);
+        prev_dp[0] = 0;
+        long long ans = 0;
+        for (int j = 1; j <= maxk; ++j) {
+            vector<long long> curr_dp(N + 1, LLONG_MIN / 2);
+            for (int i = j; i <= N; ++i) {
+                for (int l = j - 1; l < i; ++l) {
+                    long long rg = (long long)query_max(l, i) - query_min(l, i);
+                    if (prev_dp[l] != LLONG_MIN / 2) {
+                        curr_dp[i] = max(curr_dp[i], prev_dp[l] + rg);
                     }
                 }
             }
-            
-            // Check all possible number of partitions (at most k)
-            for (int j = 1; j <= k; j++) {
-                if (dp[n - 1][j] != -1) {
-                    maxScore = max(maxScore, dp[n - 1][j]);
-                }
+            prev_dp = curr_dp;
+            for (int i = n; i < 2 * n; ++i) {
+                ans = max(ans, prev_dp[i]);
             }
         }
-        
-        return maxScore;
+        return ans;
     }
 };
 # @lc code=end
