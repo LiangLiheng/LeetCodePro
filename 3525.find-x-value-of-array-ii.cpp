@@ -9,22 +9,23 @@ public:
     vector<int> resultArray(vector<int>& nums, int k, vector<vector<int>>& queries) {
         vector<int> result;
         
-        for (const auto& query : queries) {
+        for (auto& query : queries) {
             int index = query[0];
             int value = query[1];
             int start = query[2];
             int x = query[3];
             
-            // Update nums[index] to value (this persists)
+            // Update nums[index]
             nums[index] = value;
             
-            // Count how many prefixes have product % k == x
+            // Count valid suffix removals
             int count = 0;
-            int product = 1;
+            int n = nums.size();
             
-            // Iterate through the subarray from start to end
-            for (int i = start; i < nums.size(); i++) {
-                product = (product * (nums[i] % k)) % k;
+            // Compute products incrementally from start to each possible end
+            long long product = 1;
+            for (int end = start; end < n; end++) {
+                product = (product * (nums[end] % k)) % k;
                 if (product == x) {
                     count++;
                 }
