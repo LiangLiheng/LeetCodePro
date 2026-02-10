@@ -1,12 +1,84 @@
-{
-    "reasoning": "Step 1: Build output structure from scratch - Construct a JSON object containing 'reasoning' and 'result' fields with no pre-existing template.
-
-Step 2: Populate 'reasoning' field with THIS task's analysis - (a) State the exact inputs, outputs, and constraints from THIS problem statement. (b) Decompose THIS problem into specific executable sub-tasks using concrete operations (e.g., 'iterate through linked list nodes', 'count group size', 'check if size is even', 'reverse current segment'—not generic 'process data'). (c) For each sub-task, identify the specific algorithm, data structure, or logic pattern needed.
-
-Step 3: Populate 'result' field with actual implementation - Write the complete solution code in the specified language. Use the provided template structure and fill in ALL logic. Every sub-task from Step 2b must have corresponding executable code. Zero placeholders: no '[implementation]', no '...', no 'TODO', no bracket descriptions, no template text.
-
-Step 4: Verify by reading your code aloud - Extract the first 5 lines from your 'result' field content and state them verbatim. Do they begin with language keywords like 'class Solution', 'def functionName', 'ListNode* temp', 'for (int i'? Do they contain actual operations like assignments, function calls, conditionals? If ANY line contains English descriptions or placeholder markers instead of executable syntax, your 'result' field failed—delete it completely and rewrite from Step 3 with actual code.
-
-Step 5: Confirm JSON structure completeness - Verify matching braces, proper quotes, correct field names ('reasoning' and 'result'), comma separation, and that both fields contain actual substantive content.",
-    "result": "Write complete executable implementation in the specified language using the template structure provided. Code must be syntactically valid and immediately runnable for THIS specific task with no modifications, placeholders, or gaps."
-}
+#
+# @lc app=leetcode id=2074 lang=cpp
+#
+# [2074] Reverse Nodes in Even Length Groups
+#
+# @lc code=start
+/**
+* Definition for singly-linked list.
+* struct ListNode {
+*     int val;
+*     ListNode *next;
+*     ListNode() : val(0), next(nullptr) {}
+*     ListNode(int x) : val(x), next(nullptr) {}
+*     ListNode(int x, ListNode *next) : val(x), next(next) {}
+* };
+*/
+class Solution {
+public:
+    ListNode* reverseEvenLengthGroups(ListNode* head) {
+        if (!head || !head->next) return head;
+        
+        ListNode* dummy = new ListNode(0);
+        dummy->next = head;
+        ListNode* prev = dummy;
+        
+        int groupLength = 1;
+        
+        while (prev->next) {
+            // Count actual nodes in this group
+            int count = 0;
+            ListNode* curr = prev->next;
+            while (curr && count < groupLength) {
+                count++;
+                curr = curr->next;
+            }
+            
+            // If count is even, reverse this group
+            if (count % 2 == 0) {
+                ListNode* groupStart = prev->next;
+                ListNode* groupEnd = groupStart;
+                
+                // Find the end of the group
+                for (int i = 1; i < count; i++) {
+                    groupEnd = groupEnd->next;
+                }
+                
+                ListNode* nextGroupStart = groupEnd->next;
+                
+                // Reverse the group
+                ListNode* newHead = reverseList(groupStart, count);
+                
+                // Reconnect
+                prev->next = newHead;
+                groupStart->next = nextGroupStart;
+                prev = groupStart; // groupStart is now the tail
+            } else {
+                // Move prev to the end of current group
+                for (int i = 0; i < count; i++) {
+                    prev = prev->next;
+                }
+            }
+            
+            groupLength++;
+        }
+        
+        return dummy->next;
+    }
+    
+private:
+    ListNode* reverseList(ListNode* head, int count) {
+        ListNode* prev = nullptr;
+        ListNode* curr = head;
+        
+        for (int i = 0; i < count; i++) {
+            ListNode* next = curr->next;
+            curr->next = prev;
+            prev = curr;
+            curr = next;
+        }
+        
+        return prev; // New head
+    }
+};
+# @lc code=end
