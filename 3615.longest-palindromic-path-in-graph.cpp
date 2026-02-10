@@ -14,13 +14,12 @@ public:
             graph[edge[1]].push_back(edge[0]);
         }
         
-        int maxLength = 1; // At least one node forms a palindrome
+        int maxLength = 1; // At least one node is always a palindrome
         
         // Try starting from each node
         for (int start = 0; start < n; start++) {
-            string path;
             int visited = 0;
-            dfs(start, graph, label, path, visited, maxLength);
+            dfs(start, graph, label, visited, "", maxLength);
         }
         
         return maxLength;
@@ -28,25 +27,22 @@ public:
     
 private:
     void dfs(int node, vector<vector<int>>& graph, string& label, 
-             string& path, int visited, int& maxLength) {
+             int visited, string path, int& maxLength) {
         // Mark current node as visited
         visited |= (1 << node);
         path += label[node];
         
-        // Check if current path is a palindrome
+        // Check if current path is palindrome
         if (isPalindrome(path)) {
             maxLength = max(maxLength, (int)path.size());
         }
         
         // Continue DFS to adjacent nodes
-        for (int neighbor : graph[node]) {
-            if (!(visited & (1 << neighbor))) {
-                dfs(neighbor, graph, label, path, visited, maxLength);
+        for (int next : graph[node]) {
+            if (!(visited & (1 << next))) {
+                dfs(next, graph, label, visited, path, maxLength);
             }
         }
-        
-        // Backtrack
-        path.pop_back();
     }
     
     bool isPalindrome(const string& s) {
