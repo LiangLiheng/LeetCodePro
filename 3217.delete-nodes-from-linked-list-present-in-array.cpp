@@ -18,20 +18,26 @@
 class Solution {
 public:
     ListNode* modifiedList(vector<int>& nums, ListNode* head) {
-        unordered_set<int> s(nums.begin(), nums.end());
-        ListNode* dummy = new ListNode(0);
-        dummy->next = head;
-        ListNode* prev = dummy;
-        ListNode* curr = head;
-        while (curr) {
-            if (s.count(curr->val)) {
-                prev->next = curr->next;
-            } else {
-                prev = curr;
+        std::unordered_set<int> s(nums.begin(), nums.end());
+        ListNode* dummy = nullptr;
+        ListNode* tail = nullptr;
+        ListNode* cur = head;
+        while (cur != nullptr) {
+            if (s.find(cur->val) == s.end()) {
+                if (dummy == nullptr) {
+                    dummy = cur;
+                }
+                if (tail != nullptr) {
+                    tail->next = cur;
+                }
+                tail = cur;
             }
-            curr = curr->next;
+            cur = cur->next;
         }
-        return dummy->next;
+        if (tail != nullptr) {
+            tail->next = nullptr;
+        }
+        return dummy;
     }
 };
 # @lc code=end
