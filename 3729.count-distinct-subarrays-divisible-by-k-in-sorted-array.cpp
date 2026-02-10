@@ -1,0 +1,1 @@
+Analyze the problem, design an algorithm, implement it in the provided template, and return the JSON with your analysis and code.
