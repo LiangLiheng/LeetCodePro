@@ -9,75 +9,55 @@ public:
     vector<int> maximumWeight(vector<vector<int>>& intervals) {
         int n = intervals.size();
         
-        // Create array with {end, start, weight, original_index}
-        vector<array<long long, 4>> arr(n);
+        // Sort intervals by end time with original index
+        vector<array<int, 4>> arr;
         for (int i = 0; i < n; i++) {
-            arr[i] = {intervals[i][1], intervals[i][0], intervals[i][2], (long long)i};
+            arr.push_back({intervals[i][1], intervals[i][0], intervals[i][2], i});
         }
-        
-        // Sort by end time
         sort(arr.begin(), arr.end());
         
-        // DP: dp[i][k] = {max_weight, selected_indices}
-        // i: considering first i intervals, k: number selected
-        vector<vector<pair<long long, vector<int>>>> dp(n + 1, 
-            vector<pair<long long, vector<int>>>(5, {LLONG_MIN / 2, {}}));
-        dp[0][0] = {0, {}};
+        // dp[j][lastEnd] = {weight, indices} for j intervals selected, last one ending at lastEnd
+        vector<map<int, pair<long long, vector<int>>>> dp(5), next_dp(5);
+        dp[0][-1] = {0, {}};
         
         for (int i = 0; i < n; i++) {
-            long long end = arr[i][0];
-            long long start = arr[i][1];
-            long long weight = arr[i][2];
-            int idx = arr[i][3];
+            auto [end, start, weight, idx] = arr[i];
+            next_dp = dp;  // Start with previous states
             
-            // Option 1: Skip current interval
-            for (int k = 0; k <= 4; k++) {
-                auto& curr = dp[i][k];
-                auto& next = dp[i + 1][k];
-                if (curr.first > next.first || 
-                    (curr.first == next.first && curr.second < next.second)) {
-                    next = curr;
+            // Try adding this interval to each existing state
+            for (int j = 0; j < 4; j++) {
+                for (auto& [lastEnd, state] : dp[j]) {
+                    if (lastEnd < start) {  // No overlap
+                        long long newWeight = state.first + weight;
+                        vector<int> newIndices = state.second;
+                        newIndices.push_back(idx);
+                        sort(newIndices.begin(), newIndices.end());
+                        
+                        // Update next_dp[j+1][end]
+                        if (next_dp[j+1].find(end) == next_dp[j+1].end() ||
+                            next_dp[j+1][end].first < newWeight ||
+                            (next_dp[j+1][end].first == newWeight && newIndices < next_dp[j+1][end].second)) {
+                            next_dp[j+1][end] = {newWeight, newIndices};
+                        }
+                    }
                 }
             }
             
-            // Option 2: Take current interval
-            // Find last non-overlapping interval
-            int j = i - 1;
-            while (j >= 0 && arr[j][0] >= start) {
-                j--;
-            }
-            
-            for (int k = 0; k < 4; k++) {
-                auto& prev = dp[j + 1][k];
-                if (prev.first == LLONG_MIN / 2) continue;
-                
-                long long new_weight = prev.first + weight;
-                vector<int> new_indices = prev.second;
-                new_indices.push_back(idx);
-                sort(new_indices.begin(), new_indices.end());
-                
-                auto& next = dp[i + 1][k + 1];
-                if (new_weight > next.first ||
-                    (new_weight == next.first && new_indices < next.second)) {
-                    next = {new_weight, new_indices};
+            dp = next_dp;
+        }
+        
+        // Find best solution
+        pair<long long, vector<int>> best = {0, {}};
+        for (int j = 0; j <= 4; j++) {
+            for (auto& [lastEnd, state] : dp[j]) {
+                if (state.first > best.first ||
+                    (state.first == best.first && !state.second.empty() && (best.second.empty() || state.second < best.second))) {
+                    best = state;
                 }
             }
         }
         
-        // Find best result
-        long long max_weight = LLONG_MIN / 2;
-        vector<int> result;
-        for (int k = 0; k <= 4; k++) {
-            auto& state = dp[n][k];
-            if (state.first > max_weight) {
-                max_weight = state.first;
-                result = state.second;
-            } else if (state.first == max_weight && state.second < result) {
-                result = state.second;
-            }
-        }
-        
-        return result;
+        return best.second;
     }
 };
 # @lc code=end
