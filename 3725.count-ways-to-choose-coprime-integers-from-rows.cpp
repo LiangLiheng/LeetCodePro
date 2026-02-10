@@ -3,40 +3,50 @@
 #
 # [3725] Count Ways to Choose Coprime Integers from Rows
 #
+
 # @lc code=start
 class Solution {
 public:
     int countCoprime(vector<vector<int>>& mat) {
-        const int MOD = 1e9 + 7;
-        const int MAX_VAL = 150;
-        
-        // Precompute Möbius function using inclusion-exclusion
-        vector<int> mu(MAX_VAL + 1);
-        mu[1] = 1;
-        for (int i = 1; i <= MAX_VAL; i++) {
-            for (int j = 2 * i; j <= MAX_VAL; j += i) {
-                mu[j] -= mu[i];
+        const int MOD = 1000000007;
+        const int MAXV = 150;
+        vector<int> Mu(MAXV + 1, 0);
+        Mu[1] = 1;
+        vector<char> is_composite(MAXV + 1, 0);
+        vector<int> primes;
+        for (int i = 2; i <= MAXV; ++i) {
+            if (!is_composite[i]) {
+                primes.push_back(i);
+                Mu[i] = -1;
             }
-        }
-        
-        // For each divisor d, count ways to choose elements all divisible by d
-        long long result = 0;
-        for (int d = 1; d <= MAX_VAL; d++) {
-            long long ways = 1;
-            for (const auto& row : mat) {
-                int count = 0;
-                for (int val : row) {
-                    if (val % d == 0) {
-                        count++;
-                    }
+            for (size_t j = 0; j < primes.size(); ++j) {
+                int p = primes[j];
+                if (1LL * i * p > MAXV) break;
+                is_composite[i * p] = 1;
+                if (i % p == 0) {
+                    Mu[i * p] = 0;
+                    break;
+                } else {
+                    Mu[i * p] = -Mu[i];
                 }
-                ways = (ways * count) % MOD;
             }
-            // Apply Möbius inversion
-            result = (result + (long long)mu[d] * ways % MOD + MOD) % MOD;
         }
-        
-        return result;
+        int m = mat.size();
+        long long ans = 0;
+        for (int d = 1; d <= MAXV; ++d) {
+            if (Mu[d] == 0) continue;
+            long long prod = 1;
+            for (const auto& row : mat) {
+                int cnt = 0;
+                for (int x : row) {
+                    if (x % d == 0) ++cnt;
+                }
+                prod = prod * cnt % MOD;
+            }
+            long long sgn = (Mu[d] == 1 ? 1LL : MOD - 1LL);
+            ans = (ans + prod * sgn % MOD) % MOD;
+        }
+        return (int)ans;
     }
 };
 # @lc code=end
