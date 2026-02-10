@@ -3,71 +3,48 @@
 #
 # [3399] Smallest Substring With Identical Characters II
 #
+
 # @lc code=start
+#include <vector>
+#include <algorithm>
 class Solution {
 public:
-    int minLength(string s, int numOps) {
-        int n = s.length();
-        if (n == 0) return 0;
-        if (n == 1) return 1;
-        
-        // Special case: check if we can achieve alternating pattern (length 1)
-        int ops1 = 0, ops2 = 0;
-        for (int i = 0; i < n; i++) {
-            if (s[i] != ('0' + (i % 2))) ops1++;
-            if (s[i] != ('1' - (i % 2))) ops2++;
+    int minLength(std::string s, int numOps) {
+        int n = s.size();
+        std::vector<int> runs;
+        for (int i = 0; i < n; ) {
+            int start = i;
+            while (i < n && s[i] == s[start]) ++i;
+            runs.push_back(i - start);
         }
-        int minOpsForOne = min(ops1, ops2);
-        
-        if (minOpsForOne <= numOps) return 1;
-        
-        // Find all runs of consecutive identical characters
-        vector<int> runs;
-        int count = 1;
-        for (int i = 1; i < n; i++) {
-            if (s[i] == s[i-1]) {
-                count++;
-            } else {
-                runs.push_back(count);
-                count = 1;
-            }
-        }
-        runs.push_back(count);
-        
-        // Find maximum run length
-        int maxRun = *max_element(runs.begin(), runs.end());
-        if (maxRun == 1) return 1;
-        
-        // Binary search on the answer
-        int left = 2, right = maxRun;
-        int result = maxRun;
-        
-        while (left <= right) {
+        int left = 1, right = n;
+        while (left < right) {
             int mid = left + (right - left) / 2;
-            
-            if (canAchieve(runs, mid, numOps)) {
-                result = mid;
-                right = mid - 1;
+            bool possible = false;
+            if (mid == 1) {
+                int cost1 = 0, cost2 = 0;
+                for (int j = 0; j < n; ++j) {
+                    char t1 = (j % 2 == 0 ? '0' : '1');
+                    if (s[j] != t1) ++cost1;
+                    char t2 = (j % 2 == 0 ? '1' : '0');
+                    if (s[j] != t2) ++cost2;
+                }
+                if (std::min(cost1, cost2) <= numOps) possible = true;
+            } else {
+                long long need = 0;
+                for (int len : runs) {
+                    need += static_cast<long long>(len) / (mid + 1);
+                    if (need > numOps) break;
+                }
+                if (need <= numOps) possible = true;
+            }
+            if (possible) {
+                right = mid;
             } else {
                 left = mid + 1;
             }
         }
-        
-        return result;
-    }
-    
-private:
-    bool canAchieve(vector<int>& runs, int maxLen, int numOps) {
-        int opsNeeded = 0;
-        
-        for (int run : runs) {
-            if (run > maxLen) {
-                opsNeeded += run / (maxLen + 1);
-                if (opsNeeded > numOps) return false;
-            }
-        }
-        
-        return opsNeeded <= numOps;
+        return left;
     }
 };
 # @lc code=end
