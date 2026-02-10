@@ -3,149 +3,127 @@
 #
 # [3548] Equal Sum Grid Partition II
 #
+
 # @lc code=start
 class Solution {
 public:
     bool canPartitionGrid(vector<vector<int>>& grid) {
         int m = grid.size();
         int n = grid[0].size();
-        
-        // Try horizontal cuts
-        for (int cut_row = 0; cut_row < m - 1; cut_row++) {
-            if (checkHorizontalCut(grid, cut_row, m, n)) {
-                return true;
+        const int MAXV = 100000;
+        vector<long long> prefix_row(m + 1, 0);
+        for (int i = 0; i < m; ++i) {
+            long long rowsum = 0;
+            for (int j = 0; j < n; ++j) {
+                rowsum += grid[i][j];
+            }
+            prefix_row[i + 1] = prefix_row[i] + rowsum;
+        }
+        long long S = prefix_row[m];
+        vector<long long> prefix_col(n + 1, 0);
+        for (int j = 0; j < n; ++j) {
+            long long colsum = 0;
+            for (int i = 0; i < m; ++i) {
+                colsum += grid[i][j];
+            }
+            prefix_col[j + 1] = prefix_col[j] + colsum;
+        }
+        vector<vector<int>> row_pos(MAXV + 1);
+        vector<vector<int>> col_pos(MAXV + 1);
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
+                int v = grid[i][j];
+                row_pos[v].push_back(i);
+                col_pos[v].push_back(j);
             }
         }
-        
-        // Try vertical cuts
-        for (int cut_col = 0; cut_col < n - 1; cut_col++) {
-            if (checkVerticalCut(grid, cut_col, m, n)) {
-                return true;
+        for (int v = 0; v <= MAXV; ++v) {
+            sort(row_pos[v].begin(), row_pos[v].end());
+            sort(col_pos[v].begin(), col_pos[v].end());
+        }
+        // Horizontal cuts
+        for (int k = 1; k < m; ++k) {
+            long long sum_top = prefix_row[k];
+            long long sum_bot = S - sum_top;
+            if (sum_top == sum_bot) return true;
+            if (sum_top > sum_bot) {
+                long long diff = sum_top - sum_bot;
+                if (diff > MAXV) continue;
+                int h = k, w = n;
+                bool thick = (h >= 2 && w >= 2);
+                int vv = (int)diff;
+                if (thick) {
+                    auto& lis = row_pos[vv];
+                    auto it = lower_bound(lis.begin(), lis.end(), k);
+                    if (it != lis.begin()) return true;
+                } else {
+                    if (w == 1) {
+                        if ((long long)grid[0][0] == diff || (long long)grid[k - 1][0] == diff) return true;
+                    } else {
+                        if ((long long)grid[0][0] == diff || (long long)grid[0][n - 1] == diff) return true;
+                    }
+                }
+            } else if (sum_bot > sum_top) {
+                long long diff = sum_bot - sum_top;
+                if (diff > MAXV) continue;
+                int h = m - k, w = n;
+                bool thick = (h >= 2 && w >= 2);
+                int vv = (int)diff;
+                if (thick) {
+                    auto& lis = row_pos[vv];
+                    auto it = lower_bound(lis.begin(), lis.end(), k);
+                    if (it != lis.end()) return true;
+                } else {
+                    if (w == 1) {
+                        if ((long long)grid[k][0] == diff || (long long)grid[m - 1][0] == diff) return true;
+                    } else {
+                        if ((long long)grid[m - 1][0] == diff || (long long)grid[m - 1][n - 1] == diff) return true;
+                    }
+                }
             }
         }
-        
+        // Vertical cuts
+        for (int k = 1; k < n; ++k) {
+            long long sum_left = prefix_col[k];
+            long long sum_right = S - sum_left;
+            if (sum_left == sum_right) return true;
+            if (sum_left > sum_right) {
+                long long diff = sum_left - sum_right;
+                if (diff > MAXV) continue;
+                int hh = m, ww = k;
+                bool thick = (hh >= 2 && ww >= 2);
+                int vv = (int)diff;
+                if (thick) {
+                    auto& lis = col_pos[vv];
+                    auto it = lower_bound(lis.begin(), lis.end(), k);
+                    if (it != lis.begin()) return true;
+                } else {
+                    if (hh == 1) {
+                        if ((long long)grid[0][0] == diff || (long long)grid[0][k - 1] == diff) return true;
+                    } else {
+                        if ((long long)grid[0][0] == diff || (long long)grid[m - 1][0] == diff) return true;
+                    }
+                }
+            } else if (sum_right > sum_left) {
+                long long diff = sum_right - sum_left;
+                if (diff > MAXV) continue;
+                int hh = m, ww = n - k;
+                bool thick = (hh >= 2 && ww >= 2);
+                int vv = (int)diff;
+                if (thick) {
+                    auto& lis = col_pos[vv];
+                    auto it = lower_bound(lis.begin(), lis.end(), k);
+                    if (it != lis.end()) return true;
+                } else {
+                    if (hh == 1) {
+                        if ((long long)grid[0][k] == diff || (long long)grid[0][n - 1] == diff) return true;
+                    } else {
+                        if ((long long)grid[0][n - 1] == diff || (long long)grid[m - 1][n - 1] == diff) return true;
+                    }
+                }
+            }
+        }
         return false;
-    }
-    
-private:
-    bool checkHorizontalCut(vector<vector<int>>& grid, int cut_row, int m, int n) {
-        long long top_sum = 0, bottom_sum = 0;
-        
-        for (int i = 0; i <= cut_row; i++) {
-            for (int j = 0; j < n; j++) {
-                top_sum += grid[i][j];
-            }
-        }
-        
-        for (int i = cut_row + 1; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                bottom_sum += grid[i][j];
-            }
-        }
-        
-        if (top_sum == bottom_sum) return true;
-        
-        for (int i = 0; i <= cut_row; i++) {
-            for (int j = 0; j < n; j++) {
-                if (top_sum - grid[i][j] == bottom_sum) {
-                    if (isConnected(grid, i, j, 0, cut_row, 0, n-1)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        for (int i = cut_row + 1; i < m; i++) {
-            for (int j = 0; j < n; j++) {
-                if (bottom_sum - grid[i][j] == top_sum) {
-                    if (isConnected(grid, i, j, cut_row+1, m-1, 0, n-1)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    bool checkVerticalCut(vector<vector<int>>& grid, int cut_col, int m, int n) {
-        long long left_sum = 0, right_sum = 0;
-        
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j <= cut_col; j++) {
-                left_sum += grid[i][j];
-            }
-        }
-        
-        for (int i = 0; i < m; i++) {
-            for (int j = cut_col + 1; j < n; j++) {
-                right_sum += grid[i][j];
-            }
-        }
-        
-        if (left_sum == right_sum) return true;
-        
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j <= cut_col; j++) {
-                if (left_sum - grid[i][j] == right_sum) {
-                    if (isConnected(grid, i, j, 0, m-1, 0, cut_col)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        for (int i = 0; i < m; i++) {
-            for (int j = cut_col + 1; j < n; j++) {
-                if (right_sum - grid[i][j] == left_sum) {
-                    if (isConnected(grid, i, j, 0, m-1, cut_col+1, n-1)) {
-                        return true;
-                    }
-                }
-            }
-        }
-        
-        return false;
-    }
-    
-    bool isConnected(vector<vector<int>>& grid, int rem_i, int rem_j,
-                     int r_start, int r_end, int c_start, int c_end) {
-        int total = (r_end - r_start + 1) * (c_end - c_start + 1) - 1;
-        if (total == 0) return true;
-        
-        int si = -1, sj = -1;
-        for (int i = r_start; i <= r_end && si == -1; i++) {
-            for (int j = c_start; j <= c_end; j++) {
-                if (i != rem_i || j != rem_j) {
-                    si = i; sj = j; break;
-                }
-            }
-        }
-        
-        queue<pair<int, int>> q;
-        set<pair<int, int>> vis;
-        q.push({si, sj});
-        vis.insert({si, sj});
-        
-        int dirs[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}};
-        
-        while (!q.empty()) {
-            auto [ci, cj] = q.front();
-            q.pop();
-            
-            for (int d = 0; d < 4; d++) {
-                int ni = ci + dirs[d][0];
-                int nj = cj + dirs[d][1];
-                
-                if (ni >= r_start && ni <= r_end && nj >= c_start && nj <= c_end &&
-                    (ni != rem_i || nj != rem_j) && vis.find({ni, nj}) == vis.end()) {
-                    vis.insert({ni, nj});
-                    q.push({ni, nj});
-                }
-            }
-        }
-        
-        return vis.size() == total;
     }
 };
 # @lc code=end
