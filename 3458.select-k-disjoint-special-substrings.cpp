@@ -7,55 +7,53 @@
 class Solution {
 public:
     bool maxSubstringLength(string s, int k) {
-        int n = s.length();
-        
         if (k == 0) return true;
         
-        // Compute first and last occurrence of each character
-        vector<int> first(26, -1), last(26, -1);
+        int n = s.length();
+        
+        // Find first and last occurrence of each character
+        vector<int> first(26, n), last(26, -1);
         for (int i = 0; i < n; i++) {
             int c = s[i] - 'a';
-            if (first[c] == -1) first[c] = i;
+            first[c] = min(first[c], i);
             last[c] = i;
         }
         
-        // Find all special substrings
-        vector<pair<int, int>> specials; // {end, start}
+        // Find all valid special substrings represented as intervals [start, end)
+        vector<pair<int, int>> intervals;
         
-        for (int i = 0; i < n; i++) {
-            int maxRight = i;
-            int minLeft = i;
+        for (int start = 0; start < n; start++) {
+            int minStart = start;
+            int maxEnd = start;
             
-            for (int j = i; j < n; j++) {
-                int c = s[j] - 'a';
-                maxRight = max(maxRight, last[c]);
-                minLeft = min(minLeft, first[c]);
+            for (int end = start; end < n; end++) {
+                int c = s[end] - 'a';
+                minStart = min(minStart, first[c]);
+                maxEnd = max(maxEnd, last[c]);
                 
-                // Check if [i, j] is a special substring
-                if (minLeft >= i && maxRight == j) {
-                    // Exclude entire string
-                    if (i > 0 || j < n - 1) {
-                        specials.push_back({j, i});
-                    }
+                // Check if [start, end] is a valid special substring
+                // Valid if all characters in [start, end] have their full range within [start, end]
+                // and it's not the entire string
+                if (minStart == start && maxEnd == end && (start > 0 || end < n - 1)) {
+                    intervals.push_back({start, end + 1});
                 }
             }
         }
         
-        // Sort by ending position for greedy selection
-        sort(specials.begin(), specials.end());
+        // Find maximum number of disjoint intervals using interval scheduling
+        if (intervals.empty()) return false;
         
-        // Greedily select maximum disjoint substrings
+        // Sort by end position for greedy algorithm
+        sort(intervals.begin(), intervals.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+        
         int count = 0;
-        int lastEnd = -1;
-        
-        for (auto& p : specials) {
-            int end = p.first;
-            int start = p.second;
-            
-            if (start > lastEnd) {
+        int lastEnd = 0;
+        for (const auto& interval : intervals) {
+            if (interval.first >= lastEnd) {
                 count++;
-                lastEnd = end;
-                if (count >= k) return true;
+                lastEnd = interval.second;
             }
         }
         
