@@ -3,60 +3,35 @@
 #
 # [3341] Find Minimum Time to Reach Last Room I
 #
+
 # @lc code=start
 class Solution {
 public:
     int minTimeToReach(vector<vector<int>>& moveTime) {
         int n = moveTime.size();
         int m = moveTime[0].size();
-        
-        // Priority queue: (time, row, col)
-        priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<>> pq;
-        
-        // Distance array to track minimum time to reach each cell
-        vector<vector<int>> dist(n, vector<int>(m, INT_MAX));
-        
-        // Start at (0, 0) at time 0
-        pq.push({0, 0, 0});
+        vector<vector<long long>> dist(n, vector<long long>(m, LLONG_MAX / 2));
         dist[0][0] = 0;
-        
-        // Directions: up, down, left, right
-        int dx[] = {-1, 1, 0, 0};
-        int dy[] = {0, 0, -1, 1};
-        
+        using ll = long long;
+        priority_queue<tuple<ll, int, int>, vector<tuple<ll, int, int>>, greater<tuple<ll, int, int>>> pq;
+        pq.push({0LL, 0, 0});
+        int di[4] = {-1, 0, 1, 0};
+        int dj[4] = {0, 1, 0, -1};
         while (!pq.empty()) {
-            auto [time, x, y] = pq.top();
-            pq.pop();
-            
-            // If we've reached the destination
-            if (x == n - 1 && y == m - 1) {
-                return time;
-            }
-            
-            // If this is not the optimal path to this cell, skip
-            if (time > dist[x][y]) {
-                continue;
-            }
-            
-            // Try all 4 directions
-            for (int i = 0; i < 4; i++) {
-                int nx = x + dx[i];
-                int ny = y + dy[i];
-                
-                // Check bounds
-                if (nx >= 0 && nx < n && ny >= 0 && ny < m) {
-                    // Calculate arrival time at next cell
-                    int arrivalTime = max(time, moveTime[nx][ny]) + 1;
-                    
-                    // If we found a better path
-                    if (arrivalTime < dist[nx][ny]) {
-                        dist[nx][ny] = arrivalTime;
-                        pq.push({arrivalTime, nx, ny});
+            auto [time, i, j] = pq.top(); pq.pop();
+            if (time > dist[i][j]) continue;
+            for (int d = 0; d < 4; ++d) {
+                int ni = i + di[d];
+                int nj = j + dj[d];
+                if (ni >= 0 && ni < n && nj >= 0 && nj < m) {
+                    ll ntime = max(time, (ll)moveTime[ni][nj]) + 1;
+                    if (ntime < dist[ni][nj]) {
+                        dist[ni][nj] = ntime;
+                        pq.push({ntime, ni, nj});
                     }
                 }
             }
         }
-        
         return dist[n - 1][m - 1];
     }
 };
