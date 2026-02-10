@@ -3,46 +3,48 @@
 #
 # [3331] Find Subtree Sizes After Changes
 #
+
 # @lc code=start
 class Solution {
 public:
     vector<int> findSubtreeSizes(vector<int>& parent, string s) {
         int n = parent.size();
-        vector<int> newParent = parent;
-        
-        // For each node from 1 to n-1, find closest ancestor with same character
-        for (int i = 1; i < n; i++) {
-            char c = s[i];
-            int curr = parent[i];
-            
-            // Travel up the tree to find closest ancestor with same character
-            while (curr != -1) {
-                if (s[curr] == c) {
-                    newParent[i] = curr;
-                    break;
+        vector<vector<int>> adj(n);
+        for (int i = 1; i < n; ++i) {
+            adj[parent[i]].push_back(i);
+        }
+        vector<int> new_parent = parent;
+        vector<int> last_ancestor(26, -1);
+        auto dfs_modify = [&](auto&& self, int u, int p) -> void {
+            int idx = s[u] - 'a';
+            if (last_ancestor[idx] != -1) {
+                new_parent[u] = last_ancestor[idx];
+            }
+            int prev = last_ancestor[idx];
+            last_ancestor[idx] = u;
+            for (int v : adj[u]) {
+                if (v != p) {
+                    self(self, v, u);
                 }
-                curr = parent[curr];
             }
-        }
-        
-        // Build new tree structure
-        vector<vector<int>> children(n);
-        for (int i = 1; i < n; i++) {
-            children[newParent[i]].push_back(i);
-        }
-        
-        // Calculate subtree sizes using DFS
-        vector<int> answer(n);
-        function<int(int)> dfs = [&](int node) -> int {
-            int size = 1;
-            for (int child : children[node]) {
-                size += dfs(child);
-            }
-            return answer[node] = size;
+            last_ancestor[idx] = prev;
         };
-        
-        dfs(0);
-        return answer;
+        dfs_modify(dfs_modify, 0, -1);
+        vector<vector<int>> new_adj(n);
+        for (int i = 1; i < n; ++i) {
+            new_adj[new_parent[i]].push_back(i);
+        }
+        vector<int> subtree_sizes(n);
+        auto dfs_size = [&](auto&& self, int u) -> int {
+            int size = 1;
+            for (int v : new_adj[u]) {
+                size += self(self, v);
+            }
+            subtree_sizes[u] = size;
+            return size;
+        };
+        dfs_size(dfs_size, 0);
+        return subtree_sizes;
     }
 };
 # @lc code=end
