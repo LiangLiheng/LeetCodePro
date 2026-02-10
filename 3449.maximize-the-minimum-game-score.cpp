@@ -1,20 +1,43 @@
-INTERNAL REASONING GUIDANCE - DO NOT INCLUDE IN YOUR OUTPUT
-================================================================
-
-Apply these reasoning principles to solve the given task:
-
-1. Comprehension: Fully understand the task by restating it in your own words. Identify all inputs, outputs, constraints, and what specifically needs to be determined.
-
-2. Example Tracing: For all provided examples, manually work through them step-by-step. Track all state changes explicitly. Verify your manual work produces the expected outputs.
-
-3. Solution Design: Based on the task structure and constraints, identify the key insight or approach that solves the problem. Explain why this approach is correct.
-
-4. Validation: Apply your approach to the examples with actual calculations and reasoning. Verify it produces correct results. Check edge cases and boundary conditions defined by constraints.
-
-5. Implementation: Produce your complete solution using the exact format and structure specified in the task instructions.
-
-YOUR OBJECTIVE: Use these principles internally to generate your actual solution to the specific task given.
-
-YOUR OUTPUT: Must contain only your concrete solution to the given task - not these principles, not meta-commentary, not placeholder text, not generic guidance.
-
-================================================================
+#
+# @lc app=leetcode id=3449 lang=cpp
+#
+# [3449] Maximize the Minimum Game Score
+#
+# @lc code=start
+class Solution {
+public:
+    long long maxScore(vector<int>& points, int m) {
+        int n = points.size();
+        
+        // Binary search on the answer
+        long long left = 0, right = 1e15;
+        
+        auto canAchieve = [&](long long target) -> bool {
+            if (target == 0) return true;
+            
+            long long totalVisits = 0;
+            for (int i = 0; i < n; i++) {
+                long long visits = (target + points[i] - 1) / points[i]; // ceil(target / points[i])
+                totalVisits += visits;
+                if (totalVisits > 1e15) return false; // Overflow check
+            }
+            
+            long long moves = totalVisits + n - 2;
+            return moves <= m;
+        };
+        
+        long long ans = 0;
+        while (left <= right) {
+            long long mid = left + (right - left) / 2;
+            if (canAchieve(mid)) {
+                ans = mid;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        return ans;
+    }
+};
+# @lc code=end
