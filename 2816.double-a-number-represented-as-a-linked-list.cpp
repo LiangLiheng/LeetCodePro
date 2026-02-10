@@ -28,14 +28,15 @@ public:
     
 private:
     int doubleHelper(ListNode* node) {
-        if (node == nullptr) {
-            return 0;
-        }
+        if (node == nullptr) return 0;
         
+        // Get carry from next node
         int carry = doubleHelper(node->next);
-        int total = node->val * 2 + carry;
-        node->val = total % 10;
-        return total / 10;
+        
+        // Double current value and add carry
+        int doubled = node->val * 2 + carry;
+        node->val = doubled % 10;
+        return doubled / 10;
     }
 };
 # @lc code=end
