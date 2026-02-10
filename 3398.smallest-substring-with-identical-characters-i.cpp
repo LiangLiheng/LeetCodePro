@@ -8,53 +8,60 @@ class Solution {
 public:
     int minLength(string s, int numOps) {
         int n = s.length();
-        
-        // Special case: check if we can make it alternating (k=1)
-        int flips0 = 0, flips1 = 0;
-        for (int i = 0; i < n; i++) {
-            if (s[i] != ((i % 2 == 0) ? '0' : '1')) flips0++;
-            if (s[i] != ((i % 2 == 0) ? '1' : '0')) flips1++;
-        }
-        if (min(flips0, flips1) <= numOps) return 1;
-        
-        // Find all consecutive runs
-        vector<int> runs;
-        int count = 1;
-        for (int i = 1; i < n; i++) {
-            if (s[i] == s[i-1]) {
-                count++;
-            } else {
-                runs.push_back(count);
-                count = 1;
+        int left = 1, right = n;
+        const int INF = 1000000005;
+        auto can = [&](int maxl) -> bool {
+            int pd[1005][2];
+            int cd[1005][2];
+            for (int i = 0; i < 1005; ++i) {
+                for (int j = 0; j < 2; ++j) {
+                    pd[i][j] = INF;
+                }
             }
-        }
-        runs.push_back(count);
-        
-        // Binary search on answer (starting from 2 since we checked 1 above)
-        int left = 2, right = *max_element(runs.begin(), runs.end());
-        int answer = right;
-        
-        while (left <= right) {
-            int mid = (left + right) / 2;
-            if (canAchieve(runs, mid, numOps)) {
-                answer = mid;
-                right = mid - 1;
+            int orig = s[0] - '0';
+            pd[1][0] = (0 != orig);
+            pd[1][1] = (1 != orig);
+            for (int pos = 1; pos < n; ++pos) {
+                for (int i = 0; i < 1005; ++i) {
+                    for (int j = 0; j < 2; ++j) {
+                        cd[i][j] = INF;
+                    }
+                }
+                int corig = s[pos] - '0';
+                for (int plen = 1; plen <= maxl; ++plen) {
+                    for (int pc = 0; pc < 2; ++pc) {
+                        if (pd[plen][pc] > 1001) continue;
+                        for (int nc = 0; nc < 2; ++nc) {
+                            int cost = (nc != corig);
+                            int nlen = (nc == pc ? plen + 1 : 1);
+                            if (nlen > maxl) continue;
+                            cd[nlen][nc] = std::min(cd[nlen][nc], pd[plen][pc] + cost);
+                        }
+                    }
+                }
+                for (int i = 0; i < 1005; ++i) {
+                    for (int j = 0; j < 2; ++j) {
+                        pd[i][j] = cd[i][j];
+                    }
+                }
+            }
+            int minc = INF;
+            for (int len = 1; len <= maxl; ++len) {
+                for (int c = 0; c < 2; ++c) {
+                    minc = std::min(minc, pd[len][c]);
+                }
+            }
+            return minc <= numOps;
+        };
+        while (left < right) {
+            int mid = left + (right - left) / 2;
+            if (can(mid)) {
+                right = mid;
             } else {
                 left = mid + 1;
             }
         }
-        
-        return answer;
-    }
-    
-    bool canAchieve(vector<int>& runs, int k, int numOps) {
-        int flipsNeeded = 0;
-        for (int len : runs) {
-            if (len > k) {
-                flipsNeeded += len / (k + 1);
-            }
-        }
-        return flipsNeeded <= numOps;
+        return left;
     }
 };
 # @lc code=end
