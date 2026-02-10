@@ -3,56 +3,45 @@
 #
 # [3493] Properties Graph
 #
+
 # @lc code=start
 class Solution {
 public:
-    int intersect(vector<int>& a, vector<int>& b) {
-        unordered_set<int> setA(a.begin(), a.end());
-        unordered_set<int> setB(b.begin(), b.end());
-        
-        int count = 0;
-        for (int val : setA) {
-            if (setB.count(val)) {
-                count++;
-            }
-        }
-        return count;
-    }
-    
-    void dfs(int node, vector<vector<int>>& graph, vector<bool>& visited) {
-        visited[node] = true;
-        for (int neighbor : graph[node]) {
-            if (!visited[neighbor]) {
-                dfs(neighbor, graph, visited);
-            }
-        }
-    }
-    
     int numberOfComponents(vector<vector<int>>& properties, int k) {
         int n = properties.size();
-        vector<vector<int>> graph(n);
-        
-        // Build the graph
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                if (intersect(properties[i], properties[j]) >= k) {
-                    graph[i].push_back(j);
-                    graph[j].push_back(i);
+        vector<bitset<101>> bs(n);
+        for (int i = 0; i < n; ++i) {
+            for (int val : properties[i]) {
+                bs[i][val] = true;
+            }
+        }
+        vector<int> parent(n);
+        vector<int> rankk(n, 0);
+        for (int i = 0; i < n; ++i) {
+            parent[i] = i;
+        }
+        auto find = [&](auto&& self, int x) -> int {
+            return parent[x] != x ? parent[x] = self(self, parent[x]) : x;
+        };
+        auto union_sets = [&](int x, int y) {
+            int px = find(find, x);
+            int py = find(find, y);
+            if (px == py) return;
+            if (rankk[px] < rankk[py]) swap(px, py);
+            parent[py] = px;
+            if (rankk[px] == rankk[py]) ++rankk[px];
+        };
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                if ((bs[i] & bs[j]).count() >= static_cast<size_t>(k)) {
+                    union_sets(i, j);
                 }
             }
         }
-        
-        // Count connected components using DFS
-        vector<bool> visited(n, false);
         int components = 0;
-        
-        for (int i = 0; i < n; i++) {
-            if (!visited[i]) {
-                dfs(i, graph, visited);
-                components++;
-            }
+        for (int i = 0; i < n; ++i) {
+            if (find(find, i) == i) ++components;
         }
-        
         return components;
     }
 };
