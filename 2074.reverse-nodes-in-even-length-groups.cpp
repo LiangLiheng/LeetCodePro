@@ -5,80 +5,52 @@
 #
 # @lc code=start
 /**
-* Definition for singly-linked list.
-* struct ListNode {
-*     int val;
-*     ListNode *next;
-*     ListNode() : val(0), next(nullptr) {}
-*     ListNode(int x) : val(x), next(nullptr) {}
-*     ListNode(int x, ListNode *next) : val(x), next(next) {}
-* };
-*/
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
 class Solution {
 public:
     ListNode* reverseEvenLengthGroups(ListNode* head) {
-        if (!head || !head->next) return head;
-        
         ListNode* dummy = new ListNode(0);
         dummy->next = head;
-        ListNode* prev = dummy;
-        
-        int groupLength = 1;
-        
-        while (prev->next) {
-            // Count actual nodes in this group
-            int count = 0;
-            ListNode* curr = prev->next;
-            while (curr && count < groupLength) {
-                count++;
-                curr = curr->next;
+        ListNode* prev_tail = dummy;
+        int group_size = 1;
+        while (prev_tail->next != nullptr) {
+            ListNode* group_start = prev_tail->next;
+            ListNode* group_end = group_start;
+            int actual_len = 1;
+            for (int i = 1; i < group_size && group_end->next != nullptr; ++i) {
+                group_end = group_end->next;
+                ++actual_len;
             }
-            
-            // If count is even, reverse this group
-            if (count % 2 == 0) {
-                ListNode* groupStart = prev->next;
-                ListNode* groupEnd = groupStart;
-                
-                // Find the end of the group
-                for (int i = 1; i < count; i++) {
-                    groupEnd = groupEnd->next;
+            ListNode* next_start = group_end->next;
+            if (actual_len % 2 == 0) {
+                ListNode* new_head = nullptr;
+                ListNode* curr = group_start;
+                ListNode* new_tail = group_start;
+                for (int i = 0; i < actual_len; ++i) {
+                    ListNode* nxt = curr->next;
+                    curr->next = new_head;
+                    new_head = curr;
+                    curr = nxt;
                 }
-                
-                ListNode* nextGroupStart = groupEnd->next;
-                
-                // Reverse the group
-                ListNode* newHead = reverseList(groupStart, count);
-                
-                // Reconnect
-                prev->next = newHead;
-                groupStart->next = nextGroupStart;
-                prev = groupStart; // groupStart is now the tail
+                new_tail->next = next_start;
+                prev_tail->next = new_head;
+                prev_tail = new_tail;
             } else {
-                // Move prev to the end of current group
-                for (int i = 0; i < count; i++) {
-                    prev = prev->next;
-                }
+                prev_tail = group_end;
             }
-            
-            groupLength++;
+            ++group_size;
         }
-        
-        return dummy->next;
-    }
-    
-private:
-    ListNode* reverseList(ListNode* head, int count) {
-        ListNode* prev = nullptr;
-        ListNode* curr = head;
-        
-        for (int i = 0; i < count; i++) {
-            ListNode* next = curr->next;
-            curr->next = prev;
-            prev = curr;
-            curr = next;
-        }
-        
-        return prev; // New head
+        ListNode* ans = dummy->next;
+        delete dummy;
+        return ans;
     }
 };
 # @lc code=end
