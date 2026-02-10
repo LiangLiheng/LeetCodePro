@@ -3,114 +3,115 @@
 #
 # [3470] Permutations IV
 #
+
 # @lc code=start
 class Solution {
 public:
-    long long dp[51][51][3];
-    bool computed[51][51][3];
-    
-    long long countWays(int oddsLeft, int evensLeft, int lastParity) {
-        // lastParity: 0 = last was even, 1 = last was odd, 2 = first position
-        if (oddsLeft == 0 && evensLeft == 0) return 1;
-        
-        if (computed[oddsLeft][evensLeft][lastParity]) {
-            return dp[oddsLeft][evensLeft][lastParity];
-        }
-        
-        long long count = 0;
-        const long long MAX = 1e15 + 1;
-        
-        // Can place odd if last was even or this is first
-        if ((lastParity == 0 || lastParity == 2) && oddsLeft > 0) {
-            long long ways = countWays(oddsLeft - 1, evensLeft, 1);
-            if (ways >= MAX / oddsLeft) count = MAX;
-            else count = min(MAX, count + oddsLeft * ways);
-        }
-        
-        // Can place even if last was odd or this is first
-        if ((lastParity == 1 || lastParity == 2) && evensLeft > 0) {
-            long long ways = countWays(oddsLeft, evensLeft - 1, 0);
-            if (ways >= MAX / evensLeft) count = MAX;
-            else count = min(MAX, count + evensLeft * ways);
-        }
-        
-        computed[oddsLeft][evensLeft][lastParity] = true;
-        return dp[oddsLeft][evensLeft][lastParity] = count;
-    }
-    
     vector<int> permute(int n, long long k) {
-        memset(computed, false, sizeof(computed));
-        
-        vector<int> odds, evens;
-        for (int i = 1; i <= n; i++) {
-            if (i % 2 == 1) odds.push_back(i);
-            else evens.push_back(i);
+        int no = (n + 1) / 2;
+        int ne = n / 2;
+        const long long INF = 9223372036854775807LL;
+        vector<vector<vector<long long>>> dp(no + 1, vector<vector<long long>>(ne + 1, vector<long long>(2, 0LL)));
+        for (int ro = 0; ro <= no; ++ro) {
+            for (int re = 0; re <= ne; ++re) {
+                if (ro == 0 && re == 0) {
+                    dp[0][0][0] = 1;
+                    dp[0][0][1] = 1;
+                    continue;
+                }
+                // dp[ro][re][0]: next odd
+                if (ro > 0) {
+                    long long sub = dp[ro - 1][re][1];
+                    if (sub > INF / ro) {
+                        dp[ro][re][0] = INF;
+                    } else {
+                        dp[ro][re][0] = (long long)ro * sub;
+                    }
+                }
+                // dp[ro][re][1]: next even
+                if (re > 0) {
+                    long long sub = dp[ro][re - 1][0];
+                    if (sub > INF / re) {
+                        dp[ro][re][1] = INF;
+                    } else {
+                        dp[ro][re][1] = (long long)re * sub;
+                    }
+                }
+            }
         }
-        
-        int numOdds = odds.size();
-        int numEvens = evens.size();
-        
-        // Check if k is valid
-        long long total = countWays(numOdds, numEvens, 2);
-        if (k > total) return {};
-        
+        long long cnt_start_odd = dp[no][ne][0];
+        long long cnt_start_even = dp[no][ne][1];
+        bool enough = cnt_start_odd >= k || cnt_start_even >= k;
+        if (!enough) {
+            if (cnt_start_odd == INF || cnt_start_even == INF) {
+                enough = true;
+            } else {
+                long long max_ll = 9223372036854775807LL;
+                if (cnt_start_odd > max_ll - cnt_start_even) {
+                    enough = true;
+                } else {
+                    long long total = cnt_start_odd + cnt_start_even;
+                    if (total >= k) enough = true;
+                }
+            }
+        }
+        if (!enough) {
+            return {};
+        }
+        set<int> avail_o, avail_e;
+        for (int i = 1; i <= n; ++i) {
+            if (i % 2 == 1) avail_o.insert(i);
+            else avail_e.insert(i);
+        }
         vector<int> result;
-        vector<bool> usedOdd(numOdds, false);
-        vector<bool> usedEven(numEvens, false);
-        int lastParity = 2; // Start with "no last element"
-        
-        for (int pos = 0; pos < n; pos++) {
-            bool placed = false;
-            
-            // Try odds first (for lexicographical order)
-            if ((lastParity == 0 || lastParity == 2) && !placed) {
-                for (int i = 0; i < numOdds; i++) {
-                    if (usedOdd[i]) continue;
-                    
-                    usedOdd[i] = true;
-                    int oddsLeft = 0, evensLeft = 0;
-                    for (int j = 0; j < numOdds; j++) if (!usedOdd[j]) oddsLeft++;
-                    for (int j = 0; j < numEvens; j++) if (!usedEven[j]) evensLeft++;
-                    
-                    long long count = countWays(oddsLeft, evensLeft, 1);
-                    
-                    if (k <= count) {
-                        result.push_back(odds[i]);
-                        lastParity = 1;
-                        placed = true;
-                        break;
-                    } else {
-                        k -= count;
-                        usedOdd[i] = false;
-                    }
+        int rem_o = no;
+        int rem_e = ne;
+        int prev_p = -1;
+        long long rem_k = k;
+        for (int pos = 0; pos < n; ++pos) {
+            vector<int> cands;
+            auto add_cands = [&](const set<int>& s) {
+                for (int x : s) cands.push_back(x);
+            };
+            if (prev_p == -1) {
+                add_cands(avail_o);
+                add_cands(avail_e);
+            } else {
+                int req_p = 1 - prev_p;
+                if (req_p == 0) {
+                    add_cands(avail_o);
+                } else {
+                    add_cands(avail_e);
                 }
             }
-            
-            // Try evens
-            if ((lastParity == 1 || lastParity == 2) && !placed) {
-                for (int i = 0; i < numEvens; i++) {
-                    if (usedEven[i]) continue;
-                    
-                    usedEven[i] = true;
-                    int oddsLeft = 0, evensLeft = 0;
-                    for (int j = 0; j < numOdds; j++) if (!usedOdd[j]) oddsLeft++;
-                    for (int j = 0; j < numEvens; j++) if (!usedEven[j]) evensLeft++;
-                    
-                    long long count = countWays(oddsLeft, evensLeft, 0);
-                    
-                    if (k <= count) {
-                        result.push_back(evens[i]);
-                        lastParity = 0;
-                        placed = true;
-                        break;
+            sort(cands.begin(), cands.end());
+            bool found = false;
+            for (int cand : cands) {
+                int this_p = (cand % 2 == 0 ? 1 : 0);
+                int new_ro = rem_o - (this_p == 0 ? 1 : 0);
+                int new_re = rem_e - (this_p == 1 ? 1 : 0);
+                int next_p = 1 - this_p;
+                long long branch = dp[new_ro][new_re][next_p];
+                if (branch >= rem_k) {
+                    result.push_back(cand);
+                    if (this_p == 0) {
+                        avail_o.erase(cand);
                     } else {
-                        k -= count;
-                        usedEven[i] = false;
+                        avail_e.erase(cand);
                     }
+                    rem_o = new_ro;
+                    rem_e = new_re;
+                    prev_p = this_p;
+                    found = true;
+                    break;
+                } else {
+                    rem_k -= branch;
                 }
+            }
+            if (!found) {
+                return {};
             }
         }
-        
         return result;
     }
 };
