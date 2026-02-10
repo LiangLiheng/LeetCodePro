@@ -29,14 +29,15 @@
 class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
-        auto matches = [&](auto&& self, ListNode* node, TreeNode* tree) -> bool {
-            if (!node) return true;
-            if (!tree || tree->val != node->val) return false;
-            return self(self, node->next, tree->left) || self(self, node->next, tree->right);
+        auto check = [&](auto&& self, TreeNode* node, ListNode* list) -> bool {
+            if (!list) return true;
+            if (!node || node->val != list->val) return false;
+            return self(self, node->left, list->next) || self(self, node->right, list->next);
         };
         auto dfs = [&](auto&& self, TreeNode* node) -> bool {
             if (!node) return false;
-            return matches(matches, head, node) || self(self, node->left) || self(self, node->right);
+            if (node->val == head->val && check(check, node, head)) return true;
+            return self(self, node->left) || self(self, node->right);
         };
         return dfs(dfs, root);
     }
