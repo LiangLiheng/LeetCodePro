@@ -8,30 +8,29 @@ class Solution {
 public:
     vector<int> solveQueries(vector<int>& nums, vector<int>& queries) {
         int n = nums.size();
-        unordered_map<int, vector<int>> valueIndices;
         
-        // Build map of value -> list of indices
+        // Build a map from value to list of indices
+        unordered_map<int, vector<int>> valueToIndices;
         for (int i = 0; i < n; i++) {
-            valueIndices[nums[i]].push_back(i);
+            valueToIndices[nums[i]].push_back(i);
         }
         
         vector<int> answer;
-        
-        for (int queryIdx : queries) {
-            int value = nums[queryIdx];
-            vector<int>& indices = valueIndices[value];
+        for (int query : queries) {
+            int value = nums[query];
+            vector<int>& indices = valueToIndices[value];
             
-            // If only one occurrence, return -1
+            // If only one index has this value, return -1
             if (indices.size() == 1) {
                 answer.push_back(-1);
                 continue;
             }
             
-            // Find minimum circular distance
+            // Find minimum circular distance to other indices
             int minDist = INT_MAX;
             for (int idx : indices) {
-                if (idx != queryIdx) {
-                    int directDist = abs(idx - queryIdx);
+                if (idx != query) {
+                    int directDist = abs(idx - query);
                     int wrapDist = n - directDist;
                     int circularDist = min(directDist, wrapDist);
                     minDist = min(minDist, circularDist);
