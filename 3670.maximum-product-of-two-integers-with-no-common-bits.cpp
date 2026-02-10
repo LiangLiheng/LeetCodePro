@@ -3,24 +3,29 @@
 #
 # [3670] Maximum Product of Two Integers With No Common Bits
 #
+
 # @lc code=start
 class Solution {
 public:
     long long maxProduct(vector<int>& nums) {
-        long long maxProd = 0;
-        int n = nums.size();
-        
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                // Check if nums[i] and nums[j] have no common bits
-                if ((nums[i] & nums[j]) == 0) {
-                    long long prod = (long long)nums[i] * nums[j];
-                    maxProd = max(maxProd, prod);
+        const int N = 1 << 20;
+        std::vector<int> f(N, 0);
+        for (int x : nums) {
+            f[x] = x;
+        }
+        for (int i = 0; i < 20; ++i) {
+            for (int m = 0; m < N; ++m) {
+                if (m & (1 << i)) {
+                    f[m] = std::max(f[m], f[m ^ (1 << i)]);
                 }
             }
         }
-        
-        return maxProd;
+        long long ans = 0;
+        for (int x : nums) {
+            int comp = (~x) & (N - 1);
+            ans = std::max(ans, 1LL * x * f[comp]);
+        }
+        return ans;
     }
 };
 # @lc code=end
