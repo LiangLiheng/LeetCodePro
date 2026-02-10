@@ -10,28 +10,23 @@ public:
         vector<long long> result;
         
         for (auto& query : queries) {
-            int l = query[0];
-            int r = query[1];
+            int left = query[0];
+            int right = query[1];
             
-            // If subarray has only one element, no operations needed
-            if (l == r) {
-                result.push_back(0);
-                continue;
+            // Extract subarray
+            vector<long long> subarray;
+            for (int i = left; i <= right; i++) {
+                subarray.push_back(nums[i]);
             }
             
-            // Check if all elements have the same remainder modulo k
-            long long remainder = nums[l] % k;
+            // Check if all elements have same remainder mod k
+            long long firstRemainder = subarray[0] % k;
             bool possible = true;
-            
-            vector<long long> coefficients;
-            for (int i = l; i <= r; i++) {
-                if (nums[i] % k != remainder) {
+            for (long long val : subarray) {
+                if (val % k != firstRemainder) {
                     possible = false;
                     break;
                 }
-                // Each nums[i] = remainder + coefficient * k
-                long long coefficient = (nums[i] - remainder) / k;
-                coefficients.push_back(coefficient);
             }
             
             if (!possible) {
@@ -40,18 +35,19 @@ public:
             }
             
             // Sort to find median
-            sort(coefficients.begin(), coefficients.end());
+            sort(subarray.begin(), subarray.end());
             
-            // Use median as target coefficient
-            long long median = coefficients[coefficients.size() / 2];
+            // Find median
+            int n = subarray.size();
+            long long median = subarray[n / 2];
             
             // Calculate total operations
-            long long ops = 0;
-            for (long long coef : coefficients) {
-                ops += abs(coef - median);
+            long long operations = 0;
+            for (long long val : subarray) {
+                operations += abs(val - median) / k;
             }
             
-            result.push_back(ops);
+            result.push_back(operations);
         }
         
         return result;
