@@ -18,48 +18,32 @@
 class Solution {
 public:
     ListNode* doubleIt(ListNode* head) {
-        // Reverse the list to make LSD first
-        ListNode* prev = nullptr;
-        ListNode* curr = head;
-        while (curr != nullptr) {
-            ListNode* nextTemp = curr->next;
-            curr->next = prev;
-            prev = curr;
-            curr = nextTemp;
-        }
-        ListNode* newHead = prev;
-
-        // Process doubling with carry, track tail
-        ListNode* iter = newHead;
+        auto reverse = [&](ListNode* h) -> ListNode* {
+            ListNode* prev = nullptr;
+            ListNode* curr = h;
+            while (curr) {
+                ListNode* next = curr->next;
+                curr->next = prev;
+                prev = curr;
+                curr = next;
+            }
+            return prev;
+        };
+        ListNode* rev = reverse(head);
+        ListNode* curr = rev;
         int carry = 0;
-        ListNode* listTail = nullptr;
-        while (iter != nullptr) {
-            int temp = iter->val * 2 + carry;
-            iter->val = temp % 10;
-            carry = temp / 10;
-            listTail = iter;
-            iter = iter->next;
+        ListNode* tail = nullptr;
+        while (curr) {
+            int sum = curr->val * 2 + carry;
+            curr->val = sum % 10;
+            carry = sum / 10;
+            tail = curr;
+            curr = curr->next;
         }
-
-        // Append new node(s) if carry remains
-        while (carry != 0) {
-            ListNode* newNode = new ListNode(carry % 10);
-            listTail->next = newNode;
-            listTail = newNode;
-            carry /= 10;
+        if (carry) {
+            tail->next = new ListNode(carry);
         }
-
-        // Reverse back to MSD first
-        prev = nullptr;
-        curr = newHead;
-        while (curr != nullptr) {
-            ListNode* nextTemp = curr->next;
-            curr->next = prev;
-            prev = curr;
-            curr = nextTemp;
-        }
-
-        return prev;
+        return reverse(rev);
     }
 };
 # @lc code=end
