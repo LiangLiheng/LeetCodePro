@@ -6,57 +6,49 @@
 # @lc code=start
 class Solution {
 public:
-    vector<bool> sieve(int maxVal) {
-        vector<bool> isPrime(maxVal + 1, true);
+    vector<int> maximumCount(vector<int>& nums, vector<vector<int>>& queries) {
+        // Precompute primes using Sieve of Eratosthenes
+        int maxVal = 100001;
+        vector<bool> isPrime(maxVal, true);
         isPrime[0] = isPrime[1] = false;
-        
-        for (int i = 2; i * i <= maxVal; i++) {
+        for (int i = 2; i * i < maxVal; i++) {
             if (isPrime[i]) {
-                for (int j = i * i; j <= maxVal; j += i) {
+                for (int j = i * i; j < maxVal; j += i) {
                     isPrime[j] = false;
                 }
             }
         }
-        return isPrime;
-    }
-    
-    vector<int> maximumCount(vector<int>& nums, vector<vector<int>>& queries) {
-        int n = nums.size();
-        vector<int> result;
         
-        vector<bool> isPrime = sieve(100000);
+        vector<int> result;
+        int n = nums.size();
         
         for (auto& query : queries) {
             int idx = query[0];
             int val = query[1];
             nums[idx] = val;
             
-            // Compute prefix distinct primes count for each position
-            vector<int> prefixCount(n);
-            unordered_set<int> primesSeen;
-            for (int i = 0; i < n; i++) {
-                if (nums[i] <= 100000 && isPrime[nums[i]]) {
-                    primesSeen.insert(nums[i]);
-                }
-                prefixCount[i] = primesSeen.size();
-            }
-            
-            // Compute suffix distinct primes count for each position
-            vector<int> suffixCount(n);
-            primesSeen.clear();
-            for (int i = n - 1; i >= 0; i--) {
-                if (nums[i] <= 100000 && isPrime[nums[i]]) {
-                    primesSeen.insert(nums[i]);
-                }
-                suffixCount[i] = primesSeen.size();
-            }
-            
             int maxCount = 0;
-            // Try all split points k from 1 to n-1
+            
+            // Try all possible split positions k (1 <= k < n)
             for (int k = 1; k < n; k++) {
-                // Prefix is [0..k-1], suffix is [k..n-1]
-                int totalCount = prefixCount[k-1] + suffixCount[k];
-                maxCount = max(maxCount, totalCount);
+                unordered_set<int> leftPrimes, rightPrimes;
+                
+                // Count distinct primes in left part [0..k-1]
+                for (int i = 0; i < k; i++) {
+                    if (isPrime[nums[i]]) {
+                        leftPrimes.insert(nums[i]);
+                    }
+                }
+                
+                // Count distinct primes in right part [k..n-1]
+                for (int i = k; i < n; i++) {
+                    if (isPrime[nums[i]]) {
+                        rightPrimes.insert(nums[i]);
+                    }
+                }
+                
+                int count = leftPrimes.size() + rightPrimes.size();
+                maxCount = max(maxCount, count);
             }
             
             result.push_back(maxCount);
