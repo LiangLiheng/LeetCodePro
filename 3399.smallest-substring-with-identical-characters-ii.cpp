@@ -8,40 +8,44 @@ class Solution {
 public:
     int minLength(string s, int numOps) {
         int n = s.length();
-        
-        // Find initial max consecutive length
-        int maxConsec = 1;
-        int i = 0;
-        while (i < n) {
-            int j = i;
-            while (j < n && s[j] == s[i]) {
-                j++;
-            }
-            maxConsec = max(maxConsec, j - i);
-            i = j;
-        }
+        if (n == 0) return 0;
+        if (n == 1) return 1;
         
         // Special case: check if we can achieve alternating pattern (length 1)
-        int flipsPattern1 = 0, flipsPattern2 = 0;
+        int ops1 = 0, ops2 = 0;
         for (int i = 0; i < n; i++) {
-            char expected1 = '0' + (i % 2);  // '0' for even, '1' for odd
-            char expected2 = '1' - (i % 2);  // '1' for even, '0' for odd
-            if (s[i] != expected1) flipsPattern1++;
-            if (s[i] != expected2) flipsPattern2++;
+            if (s[i] != ('0' + (i % 2))) ops1++;
+            if (s[i] != ('1' - (i % 2))) ops2++;
         }
-        int minFlipsAlt = min(flipsPattern1, flipsPattern2);
+        int minOpsForOne = min(ops1, ops2);
         
-        if (numOps >= minFlipsAlt) {
-            return 1;
+        if (minOpsForOne <= numOps) return 1;
+        
+        // Find all runs of consecutive identical characters
+        vector<int> runs;
+        int count = 1;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i-1]) {
+                count++;
+            } else {
+                runs.push_back(count);
+                count = 1;
+            }
         }
+        runs.push_back(count);
         
-        // Binary search for the minimum achievable length
-        int left = 2, right = maxConsec;
-        int result = maxConsec;
+        // Find maximum run length
+        int maxRun = *max_element(runs.begin(), runs.end());
+        if (maxRun == 1) return 1;
+        
+        // Binary search on the answer
+        int left = 2, right = maxRun;
+        int result = maxRun;
         
         while (left <= right) {
             int mid = left + (right - left) / 2;
-            if (canAchieve(s, mid, numOps)) {
+            
+            if (canAchieve(runs, mid, numOps)) {
                 result = mid;
                 right = mid - 1;
             } else {
@@ -53,24 +57,17 @@ public:
     }
     
 private:
-    bool canAchieve(string s, int k, int numOps) {
-        int n = s.length();
-        int flips = 0;
-        int i = 0;
+    bool canAchieve(vector<int>& runs, int maxLen, int numOps) {
+        int opsNeeded = 0;
         
-        while (i < n) {
-            int j = i;
-            while (j < n && s[j] == s[i]) {
-                j++;
+        for (int run : runs) {
+            if (run > maxLen) {
+                opsNeeded += run / (maxLen + 1);
+                if (opsNeeded > numOps) return false;
             }
-            int len = j - i;
-            if (len > k) {
-                flips += len / (k + 1);
-            }
-            i = j;
         }
         
-        return flips <= numOps;
+        return opsNeeded <= numOps;
     }
 };
 # @lc code=end
