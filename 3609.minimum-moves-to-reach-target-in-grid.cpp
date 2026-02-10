@@ -3,63 +3,65 @@
 #
 # [3609] Minimum Moves to Reach Target in Grid
 #
+
 # @lc code=start
 class Solution {
 public:
     int minMoves(int sx, int sy, int tx, int ty) {
-        int moves = 0;
-        
-        while (tx != sx || ty != sy) {
-            if (tx < sx || ty < sy) {
-                return -1;
+        using ll = long long;
+        using pll = pair<ll, ll>;
+        ll SX = sx;
+        ll SY = sy;
+        ll TX = tx;
+        ll TY = ty;
+        queue<pair<pll, int>> q;
+        set<pll> vis;
+        q.push({{TX, TY}, 0});
+        vis.insert({TX, TY});
+        while (!q.empty()) {
+            auto front = q.front(); q.pop();
+            ll cx = front.first.first;
+            ll cy = front.first.second;
+            int d = front.second;
+            if (cx == SX && cy == SY) {
+                return d;
             }
-            
-            if (tx == ty) {
-                return -1;
-            }
-            
-            if (tx > ty) {
-                if (ty == sy) {
-                    // Check if we can reach tx from sx
-                    // At (sx, sy), if sy >= sx, max = sy, else max = sx
-                    int step_size = (ty >= sx) ? ty : sx;
-                    if ((tx - sx) % step_size == 0) {
-                        return moves + (tx - sx) / step_size;
-                    } else {
-                        return -1;
+            // Previous assuming last added to x
+            {
+                ll px = -1;
+                ll pyx = cy;
+                if (cx % 2 == 0 && cx / 2 >= cy) {
+                    px = cx / 2;
+                } else if (cx < 2LL * cy && cx >= cy) {
+                    px = cx - cy;
+                }
+                if (px != -1 && px >= SX && pyx >= SY) {
+                    pll np = {px, pyx};
+                    if (vis.find(np) == vis.end()) {
+                        vis.insert(np);
+                        q.push({np, d + 1});
                     }
                 }
-                // Reduce tx by subtracting ty multiple times
-                int steps = (tx - ty) / ty;
-                if (tx - steps * ty < sx) {
-                    steps = (tx - sx) / ty;
+            }
+            // Previous assuming last added to y
+            {
+                ll py_ = -1;
+                ll pxx = cx;
+                if (cy % 2 == 0 && cy / 2 >= cx) {
+                    py_ = cy / 2;
+                } else if (cy < 2LL * cx && cy >= cx) {
+                    py_ = cy - cx;
                 }
-                if (steps == 0) steps = 1;
-                moves += steps;
-                tx -= steps * ty;
-            } else {
-                if (tx == sx) {
-                    // Check if we can reach ty from sy
-                    // At (sx, sy), if sx >= sy, max = sx, else max = sy
-                    int step_size = (tx >= sy) ? tx : sy;
-                    if ((ty - sy) % step_size == 0) {
-                        return moves + (ty - sy) / step_size;
-                    } else {
-                        return -1;
+                if (py_ != -1 && pxx >= SX && py_ >= SY) {
+                    pll np = {pxx, py_};
+                    if (vis.find(np) == vis.end()) {
+                        vis.insert(np);
+                        q.push({np, d + 1});
                     }
                 }
-                // Reduce ty by subtracting tx multiple times
-                int steps = (ty - tx) / tx;
-                if (ty - steps * tx < sy) {
-                    steps = (ty - sy) / tx;
-                }
-                if (steps == 0) steps = 1;
-                moves += steps;
-                ty -= steps * tx;
             }
         }
-        
-        return moves;
+        return -1;
     }
 };
 # @lc code=end
