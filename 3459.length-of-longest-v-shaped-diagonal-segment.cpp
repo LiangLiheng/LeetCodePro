@@ -11,63 +11,59 @@ public:
         int m = grid[0].size();
         int maxLen = 0;
         
-        // Four diagonal directions: down-right, down-left, up-left, up-right
-        vector<pair<int, int>> dirs = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
+        // Direction vectors: down-right, down-left, up-left, up-right
+        vector<pair<int,int>> dirs = {{1,1}, {1,-1}, {-1,-1}, {-1,1}};
         
-        // Get expected value at sequence position idx
-        auto getExpected = [](int idx) -> int {
+        // Clockwise turn: 0->1, 1->2, 2->3, 3->0
+        vector<int> clockwise = {1, 2, 3, 0};
+        
+        // Expected value at position idx in sequence
+        auto getExpected = [](int idx) {
             if (idx == 0) return 1;
             return (idx % 2 == 1) ? 2 : 0;
         };
         
-        // Try each cell with value 1 as starting point
+        // Try starting from each cell
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < m; j++) {
                 if (grid[i][j] != 1) continue;
                 
-                // Try each initial direction
+                // Try each starting direction
                 for (int dir = 0; dir < 4; dir++) {
-                    // Case 1: No turn - just go straight
-                    int len = 1, x = i, y = j, idx = 1;
-                    while (true) {
-                        x += dirs[dir].first;
-                        y += dirs[dir].second;
-                        if (x < 0 || x >= n || y < 0 || y >= m) break;
-                        if (grid[x][y] != getExpected(idx)) break;
-                        len++;
+                    // Extend in the initial direction
+                    vector<pair<int,int>> path;
+                    int r = i, c = j, idx = 0;
+                    
+                    while (r >= 0 && r < n && c >= 0 && c < m && 
+                           grid[r][c] == getExpected(idx)) {
+                        path.push_back({r, c});
+                        r += dirs[dir].first;
+                        c += dirs[dir].second;
                         idx++;
                     }
-                    maxLen = max(maxLen, len);
                     
-                    // Case 2: Turn at some position
-                    x = i; y = j; idx = 1;
-                    int lenBeforeTurn = 1;
+                    maxLen = max(maxLen, (int)path.size());
                     
-                    while (true) {
-                        int nx = x + dirs[dir].first;
-                        int ny = y + dirs[dir].second;
-                        if (nx < 0 || nx >= n || ny < 0 || ny >= m) break;
-                        if (grid[nx][ny] != getExpected(idx)) break;
+                    // Try turning at each position
+                    for (int k = 1; k < path.size(); k++) {
+                        int turnR = path[k].first;
+                        int turnC = path[k].second;
+                        int newDir = clockwise[dir];
                         
-                        x = nx; y = ny;
-                        lenBeforeTurn++;
-                        idx++;
+                        int r2 = turnR + dirs[newDir].first;
+                        int c2 = turnC + dirs[newDir].second;
+                        int idx2 = k + 1;
+                        int len2 = k + 1;
                         
-                        // Try a 90-degree clockwise turn from current position
-                        int newDir = (dir + 1) % 4;
-                        int tx = x, ty = y, tidx = idx;
-                        int totalLen = lenBeforeTurn;
-                        
-                        while (true) {
-                            tx += dirs[newDir].first;
-                            ty += dirs[newDir].second;
-                            if (tx < 0 || tx >= n || ty < 0 || ty >= m) break;
-                            if (grid[tx][ty] != getExpected(tidx)) break;
-                            totalLen++;
-                            tidx++;
+                        while (r2 >= 0 && r2 < n && c2 >= 0 && c2 < m && 
+                               grid[r2][c2] == getExpected(idx2)) {
+                            len2++;
+                            r2 += dirs[newDir].first;
+                            c2 += dirs[newDir].second;
+                            idx2++;
                         }
                         
-                        maxLen = max(maxLen, totalLen);
+                        maxLen = max(maxLen, len2);
                     }
                 }
             }
