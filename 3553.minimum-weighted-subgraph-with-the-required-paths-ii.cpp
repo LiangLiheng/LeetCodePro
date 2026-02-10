@@ -6,74 +6,65 @@
 # @lc code=start
 class Solution {
 public:
-    vector<int> minimumWeight(vector<vector<int>>& edges, vector<vector<int>>& queries) {
-        int n = edges.size() + 1;
-        
-        // Build adjacency list
-        vector<vector<pair<int, int>>> graph(n);
-        map<pair<int, int>, int> edgeWeight;
-        
-        for (const auto& e : edges) {
-            int u = e[0], v = e[1], w = e[2];
-            graph[u].push_back({v, w});
-            graph[v].push_back({u, w});
-            edgeWeight[{min(u, v), max(u, v)}] = w;
-        }
-        
-        vector<int> result;
-        
-        for (const auto& q : queries) {
-            int src1 = q[0], src2 = q[1], dest = q[2];
-            
-            set<pair<int, int>> path1Edges = findPath(graph, src1, dest, n);
-            set<pair<int, int>> path2Edges = findPath(graph, src2, dest, n);
-            
-            set<pair<int, int>> allEdges = path1Edges;
-            allEdges.insert(path2Edges.begin(), path2Edges.end());
-            
-            int totalWeight = 0;
-            for (const auto& e : allEdges) {
-                totalWeight += edgeWeight[e];
-            }
-            
-            result.push_back(totalWeight);
-        }
-        
-        return result;
-    }
+    vector<vector<pair<int, long long>>> adj;
     
-private:
-    set<pair<int, int>> findPath(const vector<vector<pair<int, int>>>& graph, int start, int end, int n) {
-        vector<int> parent(n, -1);
+    vector<long long> bfs(int src, int n) {
+        vector<long long> dist(n, LLONG_MAX);
         queue<int> q;
-        q.push(start);
-        vector<bool> visited(n, false);
-        visited[start] = true;
+        q.push(src);
+        dist[src] = 0;
         
         while (!q.empty()) {
             int u = q.front();
             q.pop();
             
-            if (u == end) break;
-            
-            for (const auto& [v, w] : graph[u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    parent[v] = u;
+            for (auto [v, w] : adj[u]) {
+                if (dist[v] == LLONG_MAX) {
+                    dist[v] = dist[u] + w;
                     q.push(v);
                 }
             }
         }
+        return dist;
+    }
+    
+    vector<int> minimumWeight(vector<vector<int>>& edges, vector<vector<int>>& queries) {
+        int n = edges.size() + 1;
+        adj.resize(n);
         
-        set<pair<int, int>> pathEdges;
-        int curr = end;
-        while (parent[curr] != -1) {
-            int p = parent[curr];
-            pathEdges.insert({min(curr, p), max(curr, p)});
-            curr = p;
+        // Build adjacency list
+        for (auto& e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            adj[u].push_back({v, w});
+            adj[v].push_back({u, w});
         }
         
-        return pathEdges;
+        vector<int> answer;
+        
+        for (auto& q : queries) {
+            int src1 = q[0], src2 = q[1], dest = q[2];
+            
+            // Calculate distances from all three nodes
+            vector<long long> dist1 = bfs(src1, n);
+            vector<long long> dist2 = bfs(src2, n);
+            vector<long long> distDest = bfs(dest, n);
+            
+            long long minWeight = LLONG_MAX;
+            
+            // Try each node as potential junction
+            for (int junction = 0; junction < n; junction++) {
+                if (dist1[junction] != LLONG_MAX && 
+                    dist2[junction] != LLONG_MAX && 
+                    distDest[junction] != LLONG_MAX) {
+                    long long totalWeight = dist1[junction] + dist2[junction] + distDest[junction];
+                    minWeight = min(minWeight, totalWeight);
+                }
+            }
+            
+            answer.push_back((int)minWeight);
+        }
+        
+        return answer;
     }
 };
 # @lc code=end
