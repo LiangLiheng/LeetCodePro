@@ -7,49 +7,46 @@
 class Solution {
 public:
     int maxProduct(vector<int>& nums, int k, int limit) {
-        int n = nums.size();
-        
-        // dp[{sum, length}] = maximum product for that (sum, length) state
+        // dp[(sum, parity)] = max_product
+        // parity: 0=even length, 1=odd length
         map<pair<int,int>, int> dp;
         
-        for (int i = 0; i < n; i++) {
-            map<pair<int,int>, int> new_dp = dp; // Preserve states (skip option)
+        for (int num : nums) {
+            map<pair<int,int>, int> newDp = dp;
             
-            // Option: Start a new subsequence with nums[i]
-            if (nums[i] <= limit) {
-                auto key = make_pair(nums[i], 1);
-                new_dp[key] = max(new_dp[key], nums[i]);
+            // Start new subsequence
+            if (num <= limit) {
+                pair<int,int> state(num, 1);
+                newDp[state] = max(newDp[state], num);
             }
             
-            // Option: Extend existing subsequences
-            for (auto& [state, prod] : dp) {
-                int curr_sum = state.first;
-                int curr_len = state.second;
+            // Extend existing subsequences
+            for (auto it = dp.begin(); it != dp.end(); ++it) {
+                int sum = it->first.first;
+                int parity = it->first.second;
+                int prod = it->second;
                 
-                // Determine sign based on position in subsequence
-                int sign = (curr_len % 2 == 0) ? 1 : -1;
-                int new_sum = curr_sum + sign * nums[i];
-                int new_len = curr_len + 1;
-                long long new_prod = (long long)prod * nums[i];
+                int newSum = (parity == 0) ? (sum + num) : (sum - num);
+                long long newProd = (long long)prod * num;
                 
-                if (new_prod <= limit) {
-                    auto key = make_pair(new_sum, new_len);
-                    new_dp[key] = max(new_dp[key], (int)new_prod);
+                if (newProd <= limit) {
+                    pair<int,int> newState(newSum, 1 - parity);
+                    newDp[newState] = max(newDp[newState], (int)newProd);
                 }
             }
             
-            dp = new_dp;
+            dp = newDp;
         }
         
-        // Find maximum product with sum equal to k
-        int result = -1;
-        for (auto& [state, prod] : dp) {
-            if (state.first == k) {
-                result = max(result, prod);
+        // Find answer
+        int ans = -1;
+        for (auto it = dp.begin(); it != dp.end(); ++it) {
+            if (it->first.first == k) {
+                ans = max(ans, it->second);
             }
         }
         
-        return result;
+        return ans;
     }
 };
 # @lc code=end
