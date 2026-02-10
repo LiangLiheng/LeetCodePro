@@ -10,26 +10,24 @@ public:
         int n = s.length();
         int maxDiff = INT_MIN;
         
-        // Try all substrings of length >= k
-        for (int i = 0; i < n - k + 1; i++) {
-            vector<int> freq(5, 0); // For digits 0-4
+        // Try all possible substrings of length >= k
+        for (int i = 0; i < n; i++) {
+            unordered_map<char, int> freq;
             
             for (int j = i; j < n; j++) {
-                freq[s[j] - '0']++;
+                freq[s[j]]++;
                 
-                // Only consider substrings of length >= k
+                // Check if substring length >= k
                 if (j - i + 1 >= k) {
-                    // Find max odd frequency and min even frequency
                     int maxOdd = INT_MIN;
                     int minEven = INT_MAX;
                     
-                    for (int f : freq) {
-                        if (f > 0) {
-                            if (f % 2 == 1) {
-                                maxOdd = max(maxOdd, f);
-                            } else {
-                                minEven = min(minEven, f);
-                            }
+                    // Find max odd frequency and min non-zero even frequency
+                    for (const auto& p : freq) {
+                        if (p.second % 2 == 1) {
+                            maxOdd = max(maxOdd, p.second);
+                        } else if (p.second > 0) {
+                            minEven = min(minEven, p.second);
                         }
                     }
                     
