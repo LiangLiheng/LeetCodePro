@@ -29,19 +29,18 @@ class Solution {
 public:
     bool isSubPath(ListNode* head, TreeNode* root) {
         if (!root) return false;
-        // Check if path starts at current node, or recurse to children
+        // Try to match from current node, or from left/right subtree
         return dfs(head, root) || isSubPath(head, root->left) || isSubPath(head, root->right);
     }
     
 private:
     bool dfs(ListNode* head, TreeNode* root) {
-        // If we've matched all list nodes, success
+        // If we've matched all of the linked list, success
         if (!head) return true;
-        // If tree ended but list didn't, failure
+        // If tree node is null but list isn't finished, no match
         if (!root) return false;
-        // If values don't match, failure
+        // Values must match, and rest of list must match in left or right subtree
         if (head->val != root->val) return false;
-        // Continue matching in left or right subtree
         return dfs(head->next, root->left) || dfs(head->next, root->right);
     }
 };
