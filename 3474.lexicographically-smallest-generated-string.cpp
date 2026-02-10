@@ -10,80 +10,39 @@ public:
         int n = str1.length();
         int m = str2.length();
         int len = n + m - 1;
-        string result(len, '?');
+        string result(len, 'a');
         
-        for (int j = 0; j < len; j++) {
-            char required = 0;
-            
-            // Check all 'T' constraints that affect position j
-            for (int i = max(0, j - m + 1); i <= min(j, n - 1); i++) {
-                if (str1[i] == 'T') {
-                    int pos_in_str2 = j - i;
-                    if (required == 0) {
-                        required = str2[pos_in_str2];
-                    } else if (required != str2[pos_in_str2]) {
-                        return "";
-                    }
-                }
-            }
-            
-            // Validate character against ALL constraint types
-            if (required != 0) {
-                result[j] = required;
+        for (int pos = 0; pos < len; pos++) {
+            bool found = false;
+            for (char ch = 'a'; ch <= 'z'; ch++) {
+                result[pos] = ch;
                 
-                // Validate against F constraints even when determined by T constraints
+                // Check all constraints that are now complete at this position
                 bool valid = true;
-                for (int i = max(0, j - m + 1); i <= j && i < n; i++) {
-                    if (str1[i] == 'F' && i + m - 1 == j) {
-                        bool matches = true;
-                        for (int k = 0; k < m; k++) {
-                            if (result[i + k] != str2[k]) {
-                                matches = false;
-                                break;
-                            }
+                for (int i = max(0, pos - m + 1); i <= min(pos, n - 1); i++) {
+                    // Constraint i affects substring [i, i+m-1]
+                    if (i + m - 1 == pos) {
+                        // This constraint is complete, check it
+                        string sub = result.substr(i, m);
+                        if (str1[i] == 'T' && sub != str2) {
+                            valid = false;
+                            break;
                         }
-                        if (matches) {
+                        if (str1[i] == 'F' && sub == str2) {
                             valid = false;
                             break;
                         }
                     }
                 }
                 
-                if (!valid) {
-                    return "";
+                if (valid) {
+                    found = true;
+                    break;
                 }
-            } else {
-                // Try characters in lexicographic order
-                bool found = false;
-                for (char c = 'a'; c <= 'z'; c++) {
-                    result[j] = c;
-                    
-                    bool valid = true;
-                    for (int i = max(0, j - m + 1); i <= j && i < n; i++) {
-                        if (str1[i] == 'F' && i + m - 1 == j) {
-                            bool matches = true;
-                            for (int k = 0; k < m; k++) {
-                                if (result[i + k] != str2[k]) {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                            if (matches) {
-                                valid = false;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (valid) {
-                        found = true;
-                        break;
-                    }
-                }
-                
-                if (!found) {
-                    return "";
-                }
+            }
+            
+            if (!found) {
+                return "";
             }
         }
         
