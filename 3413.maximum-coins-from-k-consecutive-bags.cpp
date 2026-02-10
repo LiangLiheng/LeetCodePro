@@ -9,39 +9,49 @@ public:
     long long maximumCoins(vector<vector<int>>& coins, int k) {
         sort(coins.begin(), coins.end());
         
-        set<long long> startPositions;
-        
-        // Consider windows starting at segment starts
-        // and windows ending at segment ends
-        for (const auto& seg : coins) {
-            long long l = seg[0], r = seg[1];
-            startPositions.insert(l);
-            if (r - k + 1 >= 1) {
-                startPositions.insert(r - k + 1);
-            }
-        }
-        
         long long maxCoins = 0;
+        int n = coins.size();
         
-        // Evaluate each candidate window
-        for (long long start : startPositions) {
+        for (int i = 0; i < n; i++) {
+            // Try window starting at coins[i][0]
+            long long start = coins[i][0];
             long long end = start + k - 1;
-            long long currentCoins = 0;
+            long long sum = 0;
             
-            // Calculate coins in window [start, end]
-            for (const auto& seg : coins) {
-                long long l = seg[0], r = seg[1], c = seg[2];
+            for (int j = i; j < n && coins[j][0] <= end; j++) {
+                long long l = coins[j][0];
+                long long r = coins[j][1];
+                long long c = coins[j][2];
                 
-                // Calculate overlap between [start, end] and [l, r]
-                long long overlapLeft = max(start, l);
-                long long overlapRight = min(end, r);
+                long long overlapLeft = max(l, start);
+                long long overlapRight = min(r, end);
                 
                 if (overlapLeft <= overlapRight) {
-                    currentCoins += (overlapRight - overlapLeft + 1) * c;
+                    sum += (overlapRight - overlapLeft + 1) * c;
                 }
             }
             
-            maxCoins = max(maxCoins, currentCoins);
+            maxCoins = max(maxCoins, sum);
+            
+            // Try window ending at coins[i][1]
+            end = coins[i][1];
+            start = end - k + 1;
+            sum = 0;
+            
+            for (int j = 0; j < n && coins[j][0] <= end; j++) {
+                long long l = coins[j][0];
+                long long r = coins[j][1];
+                long long c = coins[j][2];
+                
+                long long overlapLeft = max(l, start);
+                long long overlapRight = min(r, end);
+                
+                if (overlapLeft <= overlapRight) {
+                    sum += (overlapRight - overlapLeft + 1) * c;
+                }
+            }
+            
+            maxCoins = max(maxCoins, sum);
         }
         
         return maxCoins;
