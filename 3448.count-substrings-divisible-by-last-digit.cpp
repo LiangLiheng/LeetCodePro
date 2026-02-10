@@ -11,18 +11,17 @@ public:
         long long count = 0;
         
         for (int i = 0; i < n; i++) {
-            if (s[i] == '0') continue; // Skip if last digit is 0
-            
             int d = s[i] - '0';
-            int num_mod = 0;
-            int power_mod = 1;
+            if (d == 0) continue; // Skip zeros (non-zero last digit required)
+            
+            long long mod_value = 0;
+            long long power_of_10 = 1; // 10^(i-j) mod d
             
             for (int j = i; j >= 0; j--) {
-                num_mod = (num_mod + (s[j] - '0') * power_mod) % d;
-                if (num_mod == 0) {
-                    count++;
-                }
-                power_mod = (power_mod * 10) % d;
+                int digit = s[j] - '0';
+                mod_value = ((long long)digit * power_of_10 % d + mod_value) % d;
+                if (mod_value == 0) count++;
+                power_of_10 = (power_of_10 * 10) % d;
             }
         }
         
