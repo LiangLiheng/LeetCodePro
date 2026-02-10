@@ -3,36 +3,25 @@
 #
 # [3779] Minimum Number of Operations to Have Distinct Elements
 #
+
 # @lc code=start
 class Solution {
 public:
     int minOperations(vector<int>& nums) {
-        int operations = 0;
-        int start = 0;
-        
-        while (start < nums.size()) {
-            // Check if remaining subarray has all distinct elements
-            unordered_set<int> seen;
-            bool allDistinct = true;
-            
-            for (int i = start; i < nums.size(); i++) {
-                if (seen.count(nums[i])) {
-                    allDistinct = false;
-                    break;
-                }
-                seen.insert(nums[i]);
-            }
-            
-            if (allDistinct) {
-                break;  // All remaining elements are distinct
-            }
-            
-            // Remove first 3 elements (or all remaining if < 3)
-            start += min(3, (int)nums.size() - start);
-            operations++;
+        int n = nums.size();
+        vector<int> last_pos(100001, -1);
+        for(int i = 0; i < n; i++) {
+            last_pos[nums[i]] = i;
         }
-        
-        return operations;
+        int max_prev = -1;
+        for(int i = 0; i < n; i++) {
+            if(last_pos[nums[i]] > i) {
+                max_prev = std::max(max_prev, i);
+            }
+        }
+        if(max_prev == -1) return 0;
+        int start_pos = max_prev + 1;
+        return (start_pos + 2) / 3;
     }
 };
 # @lc code=end
