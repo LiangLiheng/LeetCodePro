@@ -3,37 +3,43 @@
 #
 # [3776] Minimum Moves to Balance Circular Array
 #
+
 # @lc code=start
 class Solution {
 public:
     long long minMoves(vector<int>& balance) {
         int n = balance.size();
         long long total = 0;
-        
-        // Check if solution is possible
-        for (int x : balance) {
-            total += x;
-        }
-        
-        if (total < 0) return -1;
-        
-        long long minCost = LLONG_MAX;
-        
-        // Try all possible starting positions to linearize the circular array
-        for (int start = 0; start < n; start++) {
-            long long cost = 0;
-            long long carry = 0;
-            
-            // Calculate cost for this linearization
-            for (int i = 0; i < n - 1; i++) {
-                carry += balance[(start + i) % n];
-                cost += abs(carry);
+        int neg_idx = -1;
+        for(int i = 0; i < n; ++i) {
+            total += (long long) balance[i];
+            if(balance[i] < 0) {
+                neg_idx = i;
             }
-            
-            minCost = min(minCost, cost);
         }
-        
-        return minCost;
+        if(total < 0) return -1;
+        if(neg_idx == -1) return 0;
+        long long deficit = - (long long) balance[neg_idx];
+        long long moves = 0;
+        long long remaining = deficit;
+        for(int dist = 1; dist <= n / 2; ++dist) {
+            int p1 = (neg_idx + dist) % n;
+            int p2 = ((neg_idx - dist) % n + n) % n;
+            long long cap = (long long) balance[p1];
+            if(p1 != p2) {
+                cap += (long long) balance[p2];
+            }
+            if(cap >= remaining) {
+                moves += remaining * (long long) dist;
+                remaining = 0;
+            } else {
+                moves += cap * (long long) dist;
+                remaining -= cap;
+            }
+            if(remaining <= 0) break;
+        }
+        if(remaining > 0) return -1;
+        return moves;
     }
 };
 # @lc code=end
