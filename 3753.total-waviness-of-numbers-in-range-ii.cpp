@@ -7,62 +7,90 @@
 class Solution {
 public:
     long long totalWaviness(long long num1, long long num2) {
-        return solve(num2) - solve(num1 - 1);
+        int len1 = to_string(num1).length();
+        int len2 = to_string(num2).length();
+        
+        long long result = 0;
+        
+        for (int length = len1; length <= len2; length++) {
+            if (length < 3) continue;
+            
+            long long lower, upper;
+            if (length == len1 && length == len2) {
+                lower = num1;
+                upper = num2;
+            } else if (length == len1) {
+                lower = num1;
+                upper = getPower10(length) - 1;
+            } else if (length == len2) {
+                lower = getPower10(length - 1);
+                upper = num2;
+            } else {
+                lower = getPower10(length - 1);
+                upper = getPower10(length) - 1;
+            }
+            
+            result += sumWavinessWithLength(lower, upper, length);
+        }
+        
+        return result;
     }
     
 private:
-    map<tuple<int, bool, int, int, bool>, pair<long long, long long>> memo;
-    string numStr;
+    map<tuple<int, int, int, bool, bool>, pair<long long, long long>> memo;
+    string lower_str, upper_str;
+    int curr_length;
     
-    long long solve(long long num) {
-        if (num < 0) return 0;
-        numStr = to_string(num);
-        memo.clear();
-        auto [count, sum] = dp(0, true, -1, -1, false);
-        return sum;
+    long long getPower10(int exp) {
+        long long result = 1;
+        for (int i = 0; i < exp; i++) {
+            result *= 10;
+        }
+        return result;
     }
     
-    pair<long long, long long> dp(int pos, bool tight, int prev1, int prev2, bool started) {
-        if (pos == numStr.size()) {
-            if (!started) return {0, 0};  // FIX: No actual number was formed
-            return {1, 0};
+    pair<long long, long long> dp(int pos, int prev, int prevprev, bool tight_lower, bool tight_upper) {
+        if (pos == curr_length) {
+            return {1LL, 0LL};
         }
         
-        auto key = make_tuple(pos, tight, prev1, prev2, started);
-        if (memo.count(key)) {
-            return memo[key];
-        }
+        auto key = make_tuple(pos, prev, prevprev, tight_lower, tight_upper);
+        if (memo.count(key)) return memo[key];
         
-        int limit = tight ? (numStr[pos] - '0') : 9;
-        long long totalCount = 0, totalSum = 0;
+        int lower_limit = tight_lower ? (lower_str[pos] - '0') : 0;
+        int upper_limit = tight_upper ? (upper_str[pos] - '0') : 9;
         
-        for (int digit = 0; digit <= limit; digit++) {
-            if (!started && digit == 0 && numStr.size() > 1) {
-                // Leading zero for multi-digit number, continue with started=false
-                auto [count, sum] = dp(pos + 1, tight && (digit == limit), -1, -1, false);
-                totalCount += count;
-                totalSum += sum;
-            } else {
-                bool newStarted = started || (digit > 0);
-                bool newTight = tight && (digit == limit);
-                auto [count, sum] = dp(pos + 1, newTight, digit, prev1, newStarted);
-                
-                long long contribution = 0;
-                if (pos >= 2 && prev2 >= 0 && prev1 >= 0) {
-                    bool isPeak = (prev1 > prev2 && prev1 > digit);
-                    bool isValley = (prev1 < prev2 && prev1 < digit);
-                    if (isPeak || isValley) {
-                        contribution = count;
-                    }
+        long long count = 0, waviness = 0;
+        
+        for (int digit = lower_limit; digit <= upper_limit; digit++) {
+            bool new_tight_lower = tight_lower && (digit == lower_limit);
+            bool new_tight_upper = tight_upper && (digit == upper_limit);
+            
+            long long wav_contrib = 0;
+            if (pos >= 2 && prevprev >= 0) {
+                if (prev > prevprev && prev > digit) {
+                    wav_contrib = 1;
+                } else if (prev < prevprev && prev < digit) {
+                    wav_contrib = 1;
                 }
-                
-                totalCount += count;
-                totalSum += sum + contribution;
             }
+            
+            auto [sub_count, sub_wav] = dp(pos + 1, digit, prev, new_tight_lower, new_tight_upper);
+            count += sub_count;
+            waviness += sub_wav + sub_count * wav_contrib;
         }
         
-        memo[key] = {totalCount, totalSum};
-        return {totalCount, totalSum};
+        return memo[key] = {count, waviness};
+    }
+    
+    long long sumWavinessWithLength(long long lower, long long upper, int length) {
+        lower_str = to_string(lower);
+        upper_str = to_string(upper);
+        curr_length = length;
+        memo.clear();
+        
+        auto [cnt, wav] = dp(0, -1, -1, true, true);
+        return wav;
     }
 };
 # @lc code=end
