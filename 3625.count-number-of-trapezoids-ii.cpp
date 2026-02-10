@@ -3,66 +3,76 @@
 #
 # [3625] Count Number of Trapezoids II
 #
+
 # @lc code=start
 class Solution {
 public:
     int countTrapezoids(vector<vector<int>>& points) {
         int n = points.size();
-        int count = 0;
-        
-        // Try all combinations of 4 points
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                for (int k = j + 1; k < n; k++) {
-                    for (int l = k + 1; l < n; l++) {
-                        if (isTrapezoid(points[i], points[j], points[k], points[l])) {
-                            count++;
-                        }
+        set<pair<int, int>> slopes;
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                int dx = points[j][0] - points[i][0];
+                int dy = points[j][1] - points[i][1];
+                int g = __gcd(abs(dx), abs(dy));
+                if (g != 0) {
+                    dx /= g;
+                    dy /= g;
+                }
+                if (dx < 0 || (dx == 0 && dy < 0)) {
+                    dx = -dx;
+                    dy = -dy;
+                }
+                slopes.emplace(dx, dy);
+            }
+        }
+        using ll = long long;
+        ll S = 0;
+        for (auto& sl : slopes) {
+            int dx = sl.first;
+            int dy = sl.second;
+            map<ll, int> cnt;
+            for (int k = 0; k < n; ++k) {
+                ll c = (ll)dy * points[k][0] - (ll)dx * points[k][1];
+                ++cnt[c];
+            }
+            ll tot = 0, sqsum = 0;
+            for (auto& p : cnt) {
+                int sz = p.second;
+                if (sz >= 2) {
+                    ll com = (ll)sz * (sz - 1) / 2;
+                    tot += com;
+                    sqsum += com * com;
+                }
+            }
+            ll local = (tot * tot - sqsum) / 2;
+            S += local;
+        }
+        // Compute T2: number of parallelograms
+        map<pair<ll, ll>, vector<pair<int, int>>> midp;
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                ll sx = (ll)points[i][0] + points[j][0];
+                ll sy = (ll)points[i][1] + points[j][1];
+                midp[{sx, sy}].emplace_back(i, j);
+            }
+        }
+        ll T2 = 0;
+        for (auto& p : midp) {
+            auto& vec = p.second;
+            int k = vec.size();
+            for (int a = 0; a < k; ++a) {
+                for (int b = a + 1; b < k; ++b) {
+                    int i1 = vec[a].first, j1 = vec[a].second;
+                    int i2 = vec[b].first, j2 = vec[b].second;
+                    if (i1 != i2 && i1 != j2 && j1 != i2 && j1 != j2) {
+                        ++T2;
                     }
                 }
             }
         }
-        
-        return count;
-    }
-    
-private:
-    bool isTrapezoid(vector<int>& p1, vector<int>& p2, vector<int>& p3, vector<int>& p4) {
-        // Check if any three points are collinear (would make invalid quadrilateral)
-        if (areCollinear(p1, p2, p3) || areCollinear(p1, p2, p4) || 
-            areCollinear(p1, p3, p4) || areCollinear(p2, p3, p4)) {
-            return false;
-        }
-        
-        // Check if at least one pair of opposite sides is parallel
-        // There are 3 ways to pair 4 points into opposite sides
-        bool pair1 = isParallel(p1, p2, p3, p4);  // (p1,p2) with (p3,p4)
-        bool pair2 = isParallel(p1, p3, p2, p4);  // (p1,p3) with (p2,p4)
-        bool pair3 = isParallel(p1, p4, p2, p3);  // (p1,p4) with (p2,p3)
-        
-        return pair1 || pair2 || pair3;
-    }
-    
-    bool areCollinear(vector<int>& p1, vector<int>& p2, vector<int>& p3) {
-        // Three points are collinear if cross product is zero
-        long long dx1 = p2[0] - p1[0];
-        long long dy1 = p2[1] - p1[1];
-        long long dx2 = p3[0] - p1[0];
-        long long dy2 = p3[1] - p1[1];
-        
-        return dx1 * dy2 == dx2 * dy1;
-    }
-    
-    bool isParallel(vector<int>& p1, vector<int>& p2, vector<int>& p3, vector<int>& p4) {
-        // Two lines are parallel if they have the same slope
-        // Using cross product to avoid division: (y2-y1)/(x2-x1) == (y4-y3)/(x4-x3)
-        // Equivalent to: (y2-y1)*(x4-x3) == (y4-y3)*(x2-x1)
-        long long dx1 = p2[0] - p1[0];
-        long long dy1 = p2[1] - p1[1];
-        long long dx2 = p4[0] - p3[0];
-        long long dy2 = p4[1] - p3[1];
-        
-        return dy1 * dx2 == dy2 * dx1;
+        ll ans = S - T2;
+        return (int)ans;
     }
 };
 # @lc code=end
