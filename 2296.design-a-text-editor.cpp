@@ -6,45 +6,54 @@
 # @lc code=start
 class TextEditor {
 public:
-    string left, right;  // left stores chars before cursor, right after
-    
     TextEditor() {
-        left = "";
-        right = "";
+
     }
-    
+
     void addText(string text) {
-        left += text;
+        for (char c : text) {
+            left_.push_back(c);
+        }
     }
-    
+
     int deleteText(int k) {
-        int deleted = min(k, (int)left.size());
-        left = left.substr(0, left.size() - deleted);
+        int deleted = 0;
+        while (deleted < k && !left_.empty()) {
+            left_.pop_back();
+            ++deleted;
+        }
         return deleted;
     }
-    
+
     string cursorLeft(int k) {
-        int moves = min(k, (int)left.size());
-        for (int i = 0; i < moves; i++) {
-            right += left.back();
-            left.pop_back();
+        while (k > 0 && !left_.empty()) {
+            right_.push_front(left_.back());
+            left_.pop_back();
+            --k;
         }
-        return getLeft();
+        return getScreen();
     }
-    
+
     string cursorRight(int k) {
-        int moves = min(k, (int)right.size());
-        for (int i = 0; i < moves; i++) {
-            left += right.back();
-            right.pop_back();
+        while (k > 0 && !right_.empty()) {
+            left_.push_back(right_.front());
+            right_.pop_front();
+            --k;
         }
-        return getLeft();
+        return getScreen();
     }
-    
+
 private:
-    string getLeft() {
-        int len = min(10, (int)left.size());
-        return left.substr(left.size() - len, len);
+    std::deque<char> left_;
+    std::deque<char> right_;
+
+    string getScreen() {
+        size_t len = left_.size();
+        if (len <= 10) {
+            return string(left_.begin(), left_.end());
+        } else {
+            return string(left_.begin() + len - 10, left_.end());
+        }
     }
 };
 
