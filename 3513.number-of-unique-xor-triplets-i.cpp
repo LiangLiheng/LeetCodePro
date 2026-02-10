@@ -3,23 +3,17 @@
 #
 # [3513] Number of Unique XOR Triplets I
 #
+
 # @lc code=start
 class Solution {
 public:
     int uniqueXorTriplets(vector<int>& nums) {
-        unordered_set<int> unique_xors;
         int n = nums.size();
-        
-        for (int i = 0; i < n; i++) {
-            for (int j = i; j < n; j++) {
-                for (int k = j; k < n; k++) {
-                    int xor_val = nums[i] ^ nums[j] ^ nums[k];
-                    unique_xors.insert(xor_val);
-                }
-            }
+        if (n <= 2) {
+            return n;
         }
-        
-        return unique_xors.size();
+        int bits = 32 - __builtin_clz(n);
+        return 1 << bits;
     }
 };
 # @lc code=end
