@@ -8,70 +8,108 @@ class Solution {
 public:
     string lexPalindromicPermutation(string s, string target) {
         int n = s.length();
-        vector<int> freq(26, 0);
-        
-        // Count character frequencies
+        std::array<int, 26> freq = {0};
         for (char c : s) {
-            freq[c - 'a']++;
+            ++freq[c - 'a'];
         }
-        
-        // Check if palindrome is possible
-        int oddCount = 0;
-        char middle = '\0';
-        for (int i = 0; i < 26; i++) {
+        std::vector<char> odds;
+        for (int i = 0; i < 26; ++i) {
             if (freq[i] % 2 == 1) {
-                oddCount++;
-                middle = 'a' + i;
+                odds.push_back('a' + i);
             }
         }
-        
-        // Palindrome not possible if more than one odd frequency
-        if (oddCount > 1) {
+        bool odd_length = (n % 2 == 1);
+        if ((odd_length && odds.size() != 1) || (!odd_length && odds.size() != 0)) {
             return "";
         }
-        
-        // Build the left half using half of each character's frequency
-        vector<char> half;
-        for (int i = 0; i < 26; i++) {
-            int count = freq[i] / 2;
-            for (int j = 0; j < count; j++) {
-                half.push_back('a' + i);
+        char middle = odd_length ? odds[0] : '\0';
+        int half = n / 2;
+        std::array<int, 26> pairs = {0};
+        for (int i = 0; i < 26; ++i) {
+            pairs[i] = freq[i] / 2;
+        }
+        auto can_exceed = [&](int pos, const std::vector<char>& lft, const std::array<int, 26>& rem) -> bool {
+            int midpos = n / 2;
+            bool hasmid = odd_length;
+            char midc = middle;
+            for (int d = 0; d < n; ++d) {
+                char pd = '\0';
+                bool det = false;
+                if (d < static_cast<int>(lft.size())) {
+                    pd = lft[d];
+                    det = true;
+                } else if (d >= n - 1 - pos) {
+                    int j = n - 1 - d;
+                    pd = lft[j];
+                    det = true;
+                } else if (hasmid && d == midpos) {
+                    pd = midc;
+                    det = true;
+                }
+                if (!det) {
+                    int rlen = half - (pos + 1);
+                    std::vector<char> rlist;
+                    for (int i = 0; i < 26; ++i) {
+                        rlist.insert(rlist.end(), rem[i], static_cast<char>('a' + i));
+                    }
+                    std::sort(rlist.rbegin(), rlist.rend());
+                    std::vector<char> full = lft;
+                    full.insert(full.end(), rlist.begin(), rlist.end());
+                    std::string pmax(n, '\0');
+                    for (int j = 0; j < half; ++j) {
+                        pmax[j] = full[j];
+                        pmax[n - 1 - j] = full[j];
+                    }
+                    if (hasmid) {
+                        pmax[midpos] = midc;
+                    }
+                    return pmax > target;
+                }
+                if (pd != target[d]) {
+                    return pd > target[d];
+                }
+            }
+            return false;
+        };
+        std::vector<char> lhalf;
+        std::array<int, 26> rem_pairs = pairs;
+        bool success = true;
+        for (int pos = 0; pos < half; ++pos) {
+            bool found = false;
+            for (char ch = 'a'; ch <= 'z'; ++ch) {
+                int idx = ch - 'a';
+                if (rem_pairs[idx] > 0) {
+                    --rem_pairs[idx];
+                    lhalf.push_back(ch);
+                    if (can_exceed(pos, lhalf, rem_pairs)) {
+                        found = true;
+                        break;
+                    }
+                    ++rem_pairs[idx];
+                    lhalf.pop_back();
+                }
+            }
+            if (!found) {
+                success = false;
+                break;
             }
         }
-        
-        // Sort to start from lexicographically smallest permutation
-        sort(half.begin(), half.end());
-        
-        // Try all permutations of left half in lexicographic order
-        do {
-            // Build palindrome from current permutation
-            string palindrome = buildPalindrome(half, middle);
-            
-            // Return first palindrome greater than target
-            if (palindrome > target) {
-                return palindrome;
-            }
-        } while (next_permutation(half.begin(), half.end()));
-        
-        // No valid palindrome found
-        return "";
-    }
-    
-private:
-    string buildPalindrome(const vector<char>& half, char middle) {
-        string result(half.begin(), half.end());
-        
-        // Add middle character if exists (odd length palindrome)
-        if (middle != '\0') {
-            result += middle;
+        if (!success) {
+            return "";
         }
-        
-        // Add reversed left half to form palindrome
-        for (int i = half.size() - 1; i >= 0; i--) {
-            result += half[i];
+        std::string result(n, '\0');
+        for (int j = 0; j < half; ++j) {
+            result[j] = lhalf[j];
+            result[n - 1 - j] = lhalf[j];
         }
-        
-        return result;
+        if (odd_length) {
+            result[n / 2] = middle;
+        }
+        if (result > target) {
+            return result;
+        } else {
+            return "";
+        }
     }
 };
 # @lc code=end
