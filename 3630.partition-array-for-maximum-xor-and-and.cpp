@@ -10,40 +10,37 @@ public:
         int n = nums.size();
         long long maxSum = 0;
         
-        // Try all 3^n partitions
+        // Calculate total number of partitions (3^n)
         int totalPartitions = 1;
-        for (int i = 0; i < n; i++) totalPartitions *= 3;
+        for (int i = 0; i < n; i++) {
+            totalPartitions *= 3;
+        }
         
+        // Try all possible partitions using ternary representation
         for (int mask = 0; mask < totalPartitions; mask++) {
-            vector<int> A, B, C;
-            int tempMask = mask;
-            
-            // Assign each element to A, B, or C based on base-3 digit
-            for (int i = 0; i < n; i++) {
-                int group = tempMask % 3;
-                tempMask /= 3;
-                
-                if (group == 0) A.push_back(nums[i]);
-                else if (group == 1) B.push_back(nums[i]);
-                else C.push_back(nums[i]);
-            }
-            
-            // Calculate XOR(A)
-            long long xorA = 0;
-            for (int x : A) xorA ^= x;
-            
-            // Calculate AND(B)
+            int temp = mask;
+            long long xorA = 0, xorC = 0;
             long long andB = 0;
-            if (!B.empty()) {
-                andB = B[0];
-                for (size_t i = 1; i < B.size(); i++) {
-                    andB &= B[i];
+            bool hasB = false;
+            
+            // Decode ternary mask: 0=A, 1=B, 2=C
+            for (int i = 0; i < n; i++) {
+                int group = temp % 3;
+                temp /= 3;
+                
+                if (group == 0) {
+                    xorA ^= nums[i];
+                } else if (group == 1) {
+                    if (!hasB) {
+                        andB = nums[i];
+                        hasB = true;
+                    } else {
+                        andB &= nums[i];
+                    }
+                } else {
+                    xorC ^= nums[i];
                 }
             }
-            
-            // Calculate XOR(C)
-            long long xorC = 0;
-            for (int x : C) xorC ^= x;
             
             long long sum = xorA + andB + xorC;
             maxSum = max(maxSum, sum);
