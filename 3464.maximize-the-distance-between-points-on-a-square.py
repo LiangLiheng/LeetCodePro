@@ -9,53 +9,44 @@ from typing import List
 
 class Solution:
     def maxDistance(self, side: int, points: List[List[int]], k: int) -> int:
-        def get_perim(p: List[int]) -> int:
-            x, y = p
-            if y == 0:
-                return x
-            elif x == side:
-                return side + y
-            elif y == side:
-                return 2 * side + (side - x)
-            elif x == 0:
-                return 3 * side + (side - y)
-            return 0  # invalid
-
-        n = len(points)
-        order = sorted(range(n), key=lambda i: get_perim(points[i]))
-        sorted_points = [points[i] for i in order]
-
-        def can_select(D: int) -> bool:
-            selected = []
-
-            def bt(start: int, count: int) -> bool:
-                if count == k:
-                    return True
-                if n - start < k - count:
+        def can_select(d):
+            n = len(points)
+            chosen = []
+            def backtrack(start):
+                # Prune if not enough points remain
+                if len(chosen) + (n - start) < k:
                     return False
+                if len(chosen) == k:
+                    # Final verification step
+                    for i in range(k):
+                        for j in range(i+1, k):
+                            if abs(chosen[i][0] - chosen[j][0]) + abs(chosen[i][1] - chosen[j][1]) < d:
+                                return False
+                    return True
                 for i in range(start, n):
-                    good = True
-                    for prev in selected:
-                        dx = abs(sorted_points[i][0] - sorted_points[prev][0])
-                        dy = abs(sorted_points[i][1] - sorted_points[prev][1])
-                        if dx + dy < D:
-                            good = False
+                    p = points[i]
+                    ok = True
+                    for q in chosen:
+                        if abs(p[0]-q[0]) + abs(p[1]-q[1]) < d:
+                            ok = False
                             break
-                    if good:
-                        selected.append(i)
-                        if bt(i + 1, count + 1):
+                    if ok:
+                        chosen.append(p)
+                        if backtrack(i+1):
                             return True
-                        selected.pop()
+                        chosen.pop()
                 return False
+            # Optionally, sort or prioritize points here for better pruning
+            return backtrack(0)
 
-            return bt(0, 0)
-
-        left, right = 0, 2 * side + 2
-        while left < right:
-            mid = (left + right + 1) // 2
+        left, right = 0, 2 * side
+        answer = 0
+        while left <= right:
+            mid = (left + right) // 2
             if can_select(mid):
-                left = mid
+                answer = mid
+                left = mid + 1
             else:
                 right = mid - 1
-        return left
+        return answer
 # @lc code=end
