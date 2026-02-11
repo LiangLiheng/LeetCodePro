@@ -8,20 +8,19 @@
 class Solution:
     def countSubstrings(self, s: str) -> int:
         n = len(s)
-        freq = [[0] * k for k in range(10)]
-        ans = 0
+        res = 0
+        # For each end position
         for i in range(n):
-            dig = int(s[i])
-            new_freq = [[0] * k for k in range(10)]
-            for k in range(1, 10):
-                for m in range(k):
-                    new_mod = (m * 10 + dig) % k
-                    new_freq[k][new_mod] += freq[k][m]
-            for k in range(1, 10):
-                new_freq[k][dig % k] += 1
-            if dig > 0:
-                ans += new_freq[dig][0]
-            freq = new_freq
-        return ans
-
+            last_digit = int(s[i])
+            if last_digit == 0:
+                continue  # cannot divide by zero
+            val = 0
+            power = 1
+            # For each substring ending at i, go backwards (up to 10 digits for efficiency)
+            for j in range(i, max(-1, i-10), -1):
+                val = int(s[j]) * power + val
+                if val % last_digit == 0:
+                    res += 1
+                power *= 10
+        return res
 # @lc code=end
