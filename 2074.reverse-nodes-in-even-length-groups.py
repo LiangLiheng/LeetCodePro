@@ -12,31 +12,43 @@
 #         self.next = next
 class Solution:
     def reverseEvenLengthGroups(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        def reverse_k_nodes(start, k):
+            prev = None
+            curr = start
+            for _ in range(k):
+                nxt = curr.next
+                curr.next = prev
+                prev = curr
+                curr = nxt
+            return prev, start, curr  # new head, new tail, next node after group
+
         dummy = ListNode(0, head)
-        prev_tail = dummy
+        prev_group_tail = dummy
+        curr = head
         group_size = 1
-        while prev_tail.next:
-            group_start = prev_tail.next
-            cur = group_start
-            group_len = 0
-            group_end = None
-            while cur and group_len < group_size:
-                group_len += 1
-                group_end = cur
-                cur = cur.next
-            if group_len % 2 == 0:
-                reversed_head = None
-                rev_cur = group_start
-                for _ in range(group_len):
-                    nxt = rev_cur.next
-                    rev_cur.next = reversed_head
-                    reversed_head = rev_cur
-                    rev_cur = nxt
-                prev_tail.next = reversed_head
-                group_start.next = cur
-                prev_tail = group_start
+        while curr:
+            # Find the actual length of this group
+            group_head = curr
+            count = 0
+            temp = curr
+            for _ in range(group_size):
+                if temp:
+                    temp = temp.next
+                    count += 1
+                else:
+                    break
+            # Decide if we reverse
+            if count % 2 == 0:
+                rev_head, rev_tail, next_start = reverse_k_nodes(curr, count)
+                prev_group_tail.next = rev_head
+                rev_tail.next = next_start
+                prev_group_tail = rev_tail
+                curr = next_start
             else:
-                prev_tail = group_end
+                # No reversal, just move the pointers
+                for _ in range(count):
+                    prev_group_tail = curr
+                    curr = curr.next
             group_size += 1
         return dummy.next
 # @lc code=end
