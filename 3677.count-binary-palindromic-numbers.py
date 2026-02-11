@@ -7,37 +7,31 @@
 # @lc code=start
 class Solution:
     def countBinaryPalindromes(self, n: int) -> int:
-        if n == 0:
-            return 1
-        length = len(bin(n)[2:])
-        count = 1  # for 0
-        for l in range(1, length):
-            count += 1 << ((l - 1) // 2)
-        half_len = (length + 1) // 2
-        low = 1 << (half_len - 1)
-        high = (1 << half_len) - 1
-        def gen_pal(left_val: int) -> int:
-            full = 0
-            p_l = 1 << (length - 1)
-            p_r = 1
-            h = half_len
-            for i in range(h):
-                bit = (left_val >> (h - 1 - i)) & 1
-                full += bit * p_l
-                if i < length - 1 - i:
-                    full += bit * p_r
-                p_l >>= 1
-                p_r <<= 1
-            return full
-        l, r = low, high
-        while l <= r:
-            mid = l + (r - l) // 2
-            if gen_pal(mid) <= n:
-                l = mid + 1
-            else:
-                r = mid - 1
-        add = r - low + 1 if r >= low else 0
-        count += add
-        return count
-
+        def is_palindrome(x):
+            s = bin(x)[2:]
+            return s == s[::-1]
+        
+        def create_palindrome(first_half, odd):
+            res = first_half
+            if odd:
+                first_half //= 2
+            while first_half:
+                res = res * 2 + (first_half % 2)
+                first_half //= 2
+            return res
+        
+        result = 0
+        max_len = n.bit_length()
+        for length in range(1, max_len + 1):
+            half_len = (length + 1) // 2
+            start = 1 << (half_len - 1) if length > 1 else 0
+            end = 1 << half_len
+            for first_half in range(start, end):
+                pal = create_palindrome(first_half, length % 2)
+                if pal > n:
+                    continue
+                # Verification step: ensure pal is palindromic
+                if is_palindrome(pal):
+                    result += 1
+        return result
 # @lc code=end
