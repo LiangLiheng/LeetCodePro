@@ -1,25 +1,7 @@
-#
-# @lc app=leetcode id=3434 lang=python3
-#
-# [3434] Maximum Frequency After Subarray Operation
-#
-
-# @lc code=start
-from typing import List
-
-class Solution:
-    def maxFrequency(self, nums: List[int], k: int) -> int:
-        total_k = nums.count(k)
-        max_gain = 0
-        for v in range(1, 51):
-            if v == k:
-                continue
-            current = 0
-            maxs = float('-inf')
-            for num in nums:
-                score = 1 if num == v else (-1 if num == k else 0)
-                current = max(score, current + score)
-                maxs = max(maxs, current)
-            max_gain = max(max_gain, max(0, maxs))
-        return total_k + max_gain
-# @lc code=end
+Step 1: Decompose the problem and identify the objective (optimizing transformation parameter and subarray).
+Step 2: Systematically consider all possible transformation parameters, not just those derived from specific elements.
+Step 3: For each parameter, efficiently determine the maximum-length subarray that can be transformed to the target value.
+Step 4: Use prefix sums or cumulative counts to efficiently count occurrences of the target value outside the chosen subarray.
+Step 5: Evaluate all candidate solutions and select the one yielding the highest frequency of the target value.
+Step 6: Verify that the approach explores the entire solution space and does not miss global optima.
+Step 7: Confirm computational efficiency and correctness for all input sizes before finalizing the solution.
