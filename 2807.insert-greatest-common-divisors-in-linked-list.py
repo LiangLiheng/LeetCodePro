@@ -13,14 +13,16 @@
 class Solution:
     def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:
         def gcd(a: int, b: int) -> int:
-            while b != 0:
+            while b:
                 a, b = b, a % b
             return a
         
         cur = head
         while cur and cur.next:
             g = gcd(cur.val, cur.next.val)
-            cur.next = ListNode(g, cur.next)
-            cur = cur.next.next
+            new_node = ListNode(g)
+            new_node.next = cur.next
+            cur.next = new_node
+            cur = new_node.next
         return head
 # @lc code=end
