@@ -3,7 +3,6 @@
 #
 # [1670] Design Front Middle Back Queue
 #
-
 # @lc code=start
 from collections import deque
 
@@ -15,44 +14,44 @@ class FrontMiddleBackQueue:
 
     def pushFront(self, val: int) -> None:
         self.left.appendleft(val)
-        self._balance()
+        if len(self.left) > len(self.right) + 1:
+            self.right.appendleft(self.left.pop())
 
     def pushMiddle(self, val: int) -> None:
         if len(self.left) > len(self.right):
             self.right.appendleft(self.left.pop())
         self.left.append(val)
-        self._balance()
 
     def pushBack(self, val: int) -> None:
         self.right.append(val)
-        self._balance()
+        if len(self.right) > len(self.left):
+            self.left.append(self.right.popleft())
 
     def popFront(self) -> int:
-        if not self.left and not self.right:
+        if not self.left:
             return -1
-        val = self.left.popleft() if self.left else self.right.popleft()
-        self._balance()
+        val = self.left.popleft()
+        if len(self.left) < len(self.right):
+            self.left.append(self.right.popleft())
         return val
 
     def popMiddle(self) -> int:
         if not self.left:
             return -1
         val = self.left.pop()
-        self._balance()
+        if len(self.left) < len(self.right):
+            self.left.append(self.right.popleft())
         return val
 
     def popBack(self) -> int:
-        if not self.left and not self.right:
+        if len(self.left) == 0 and len(self.right) == 0:
             return -1
-        val = self.right.pop() if self.right else self.left.pop()
-        self._balance()
-        return val
-
-    def _balance(self) -> None:
+        if len(self.right) == 0:
+            return self.left.pop()
+        val = self.right.pop()
         if len(self.left) > len(self.right) + 1:
             self.right.appendleft(self.left.pop())
-        elif len(self.right) > len(self.left):
-            self.left.append(self.right.popleft())
+        return val
 
 
 # Your FrontMiddleBackQueue object will be instantiated and called as such:
