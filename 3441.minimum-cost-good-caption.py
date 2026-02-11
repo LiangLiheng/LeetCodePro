@@ -8,94 +8,65 @@
 class Solution:
     def minCostGoodCaption(self, caption: str) -> str:
         n = len(caption)
-        if n < 3:
+        if n == 0:
             return ''
+        s = [ord(ch) - ord('a') for ch in caption]
+        C = 26
+        RL = 3
         INF = 10**9 + 7
-        A = ord('a')
-        s = [ord(c) - A for c in caption]
-        dp = [[[INF] * 4 for _ in range(26)] for _ in range(n + 1)]
-        for c in range(26):
-            dp[1][c][1] = abs(s[0] - c)
-        for i in range(1, n):
-            for c in range(26):
-                for r in range(1, 4):
-                    if dp[i][c][r] == INF:
-                        continue
-                    # continue run
-                    cost = abs(s[i] - c)
-                    nr = min(3, r + 1)
-                    dp[i + 1][c][nr] = min(dp[i + 1][c][nr], dp[i][c][r] + cost)
-                    # start new run
-                    if r == 3:
-                        for nc in range(26):
-                            if nc == c:
-                                continue
-                            cost = abs(s[i] - nc)
-                            dp[i + 1][nc][1] = min(dp[i + 1][nc][1], dp[i][c][r] + cost)
-        min_cost = INF
-        for c in range(26):
-            min_cost = min(min_cost, dp[n][c][3])
-        if min_cost == INF:
-            return ''
-        # backward DP for suffix mins
-        bdp = [[[INF] * 4 for _ in range(26)] for _ in range(n + 1)]
-        for c in range(26):
-            bdp[n][c][3] = 0
+        back = [[[INF] * RL for _ in range(C)] for _ in range(n + 1)]
+        best = [[[26] * RL for _ in range(C)] for _ in range(n)]
+        for c in range(C):
+            back[n][c][2] = 0
         for i in range(n - 1, -1, -1):
-            for c in range(26):
-                for r in range(1, 4):
-                    # continue
-                    cost = abs(s[i] - c)
-                    nr = min(3, r + 1)
-                    bdp[i][c][r] = min(bdp[i][c][r], cost + bdp[i + 1][c][nr])
-                    # new run
-                    if r == 3:
-                        for nc in range(26):
-                            if nc == c:
+            for prev in range(C):
+                for prl in range(RL):
+                    minv = INF
+                    bnew = 26
+                    for newc in range(C):
+                        add_cost = abs(newc - s[i])
+                        if newc == prev:
+                            nrl = min(2, prl + 1)
+                        else:
+                            if prl != 2:
                                 continue
-                            cost = abs(s[i] - nc)
-                            bdp[i][c][r] = min(bdp[i][c][r], cost + bdp[i + 1][nc][1])
+                            nrl = 0
+                        temp = add_cost + back[i + 1][newc][nrl]
+                        if temp < minv:
+                            minv = temp
+                            bnew = newc
+                    back[i][prev][prl] = minv
+                    best[i][prev][prl] = bnew
+        global_min = INF
+        for cand in range(C):
+            addc = abs(cand - s[0])
+            tot = addc + back[1][cand][0]
+            if tot < global_min:
+                global_min = tot
+        if global_min == INF:
+            return ''
         # reconstruct lex smallest
-        res = [''] * n
-        # pos 0
-        for chosen in range(26):
-            cost_add = abs(s[0] - chosen)
-            new_c = chosen
-            new_r = 1
-            suf = bdp[1][new_c][new_r]
-            if cost_add + suf == min_cost:
-                res[0] = chr(A + chosen)
-                prefix_cost = cost_add
-                curr_c = new_c
-                curr_r = new_r
-                curr_i = 1
+        res = []
+        # first char
+        first_cand = 26
+        for cand in range(C):
+            addc = abs(cand - s[0])
+            tot = addc + back[1][cand][0]
+            if tot == global_min:
+                first_cand = cand
                 break
-        else:
-            return ''  # should not happen
-        # remaining
-        while curr_i < n:
-            pos = curr_i
-            for chosen in range(26):
-                if chosen == curr_c:
-                    new_c = curr_c
-                    new_r = min(3, curr_r + 1)
-                    possible = True
-                else:
-                    new_c = chosen
-                    new_r = 1
-                    possible = (curr_r == 3)
-                if not possible:
-                    continue
-                cost_add = abs(s[pos] - chosen)
-                suf = bdp[curr_i + 1][new_c][new_r]
-                if prefix_cost + cost_add + suf == min_cost:
-                    res[pos] = chr(A + chosen)
-                    prefix_cost += cost_add
-                    curr_c = new_c
-                    curr_r = new_r
-                    curr_i += 1
-                    break
+        res.append(chr(ord('a') + first_cand))
+        prev_c = first_cand
+        rl = 0
+        i_now = 1
+        while i_now < n:
+            cand = best[i_now][prev_c][rl]
+            res.append(chr(ord('a') + cand))
+            if cand == prev_c:
+                rl = min(2, rl + 1)
             else:
-                return ''  # error
+                rl = 0
+            prev_c = cand
+            i_now += 1
         return ''.join(res)
 # @lc code=end
