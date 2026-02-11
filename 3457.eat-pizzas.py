@@ -5,19 +5,22 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def maxWeight(self, pizzas: List[int]) -> int:
-        sp = sorted(pizzas, reverse=True)
+        # Step 1: Sort the pizzas in ascending order
+        pizzas.sort()
         n = len(pizzas)
+        res = 0
         days = n // 4
-        num_odd = (days + 1) // 2
-        num_even = days // 2
-        ans = sum(sp[:num_odd])
-        pos = num_odd
-        for i in range(num_even):
-            ans += sp[pos + 2 * i + 1]
-        return ans
-
+        # Step 2: Partition pizzas into groups of 4 from largest to smallest
+        for i in range(days):
+            idx = n - 4 * i
+            # For each group, select pizzas[idx-4] to pizzas[idx-1]
+            # Step 3: Apply the day's rule for weight gain
+            if i % 2 == 0:  # Odd day (1-indexed)
+                res += pizzas[idx - 1]
+            else:  # Even day
+                res += pizzas[idx - 2]
+        # Step 4: Verification step - in this context, sorting and grouping is justified because maximizing the highest values for Z and Y each day maximizes the gain, and all pizzas must be used exactly once in groups of four
+        return res
 # @lc code=end
