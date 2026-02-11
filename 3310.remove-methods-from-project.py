@@ -10,35 +10,30 @@ from typing import List
 class Solution:
     def remainingMethods(self, n: int, k: int, invocations: List[List[int]]) -> List[int]:
         adj = [[] for _ in range(n)]
-        rev_adj = [[] for _ in range(n)]
         for a, b in invocations:
             adj[a].append(b)
-            rev_adj[b].append(a)
-        # Find suspicious: reachable from k
-        vis = [False] * n
-        suspicious = set()
+        
+        # Iterative DFS: visited marks suspicious (reachable from k including k)
+        visited = [False] * n
         stack = [k]
-        vis[k] = True
-        suspicious.add(k)
+        visited[k] = True
         while stack:
-            u = stack.pop()
-            for v in adj[u]:
-                if not vis[v]:
-                    vis[v] = True
-                    suspicious.add(v)
-                    stack.append(v)
-        # Check if removable
+            node = stack.pop()
+            for nei in adj[node]:
+                if not visited[nei]:
+                    visited[nei] = True
+                    stack.append(nei)
+        
+        # Check no external invocation to suspicious
         can_remove = True
-        for s in suspicious:
-            for c in rev_adj[s]:
-                if c not in suspicious:
-                    can_remove = False
-                    break
-            if not can_remove:
+        for a, b in invocations:
+            if not visited[a] and visited[b]:
+                can_remove = False
                 break
+        
         if can_remove:
-            res = [i for i in range(n) if i not in suspicious]
+            remaining = [i for i in range(n) if not visited[i]]
         else:
-            res = list(range(n))
-        return sorted(res)
+            remaining = list(range(n))
+        return remaining
 # @lc code=end
