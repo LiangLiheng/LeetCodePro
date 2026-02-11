@@ -7,16 +7,24 @@
 # @lc code=start
 class Solution:
     def minOperations(self, nums: List[int]) -> int:
-        pos = {}
-        for i, num in enumerate(nums):
-            if num not in pos:
-                pos[num] = []
-            pos[num].append(i)
-        m = -1
-        for positions in pos.values():
-            if len(positions) >= 2:
-                m = max(m, positions[-2])
-        if m == -1:
+        n = len(nums)
+        if len(set(nums)) == n:
             return 0
-        return (m + 3) // 3
+        ops = 0
+        start = 0
+        while start < n:
+            # Simulate removing first three elements
+            start += 3
+            # If array is empty after removal
+            if start >= n:
+                ops += 1
+                break
+            rest = nums[start:]
+            # Efficiently check for duplicates only in the remaining elements
+            if len(set(rest)) == len(rest):
+                ops += 1
+                break
+            ops += 1
+        # Final verification for correctness
+        return ops
 # @lc code=end
