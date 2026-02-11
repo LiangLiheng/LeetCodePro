@@ -12,82 +12,67 @@ class Solution:
         n = len(nums)
         if n == 0:
             return 0
-        prefix = [0] * (n + 1)
+        LOG = 18
+        logg = [0] * (n + 1)
+        for i in range(2, n + 1):
+            logg[i] = logg[i // 2] + 1
+        st = [[0] * n for _ in range(LOG)]
         for i in range(n):
-            prefix[i + 1] = prefix[i] + nums[i]
-        
-        next_g = [n] * n
+            st[0][i] = nums[i]
+        for j in range(1, LOG):
+            for i in range(n - (1 << j) + 1):
+                st[j][i] = max(st[j - 1][i], st[j - 1][i + (1 << (j - 1))])
+        def query_max(L: int, R: int) -> int:
+            if L >= R:
+                return -1
+            length = R - L
+            lg = logg[length]
+            return max(st[lg][L], st[lg][R - (1 << lg)])
+        ng = [n] * n
         stack = []
         for i in range(n - 1, -1, -1):
             while stack and nums[stack[-1]] <= nums[i]:
                 stack.pop()
-            if stack:
-                next_g[i] = stack[-1]
+            ng[i] = stack[-1] if stack else n
             stack.append(i)
-        
-        cost_whole = [0] * n
-        for i in range(n):
-            t = next_g[i]
-            if t > i + 1:
-                nump = t - i - 1
-                s = prefix[t] - prefix[i + 1]
-                cost_whole[i] = nump * nums[i] - s
-        
-        LOG = 18
-        parent = [[n] * n for _ in range(LOG)]
-        cum_cost = [[0] * n for _ in range(LOG)]
-        for i in range(n):
-            parent[0][i] = next_g[i]
-            cum_cost[0][i] = cost_whole[i]
-        for lv in range(1, LOG):
-            for i in range(n):
-                mid = parent[lv - 1][i]
-                if mid == n:
-                    parent[lv][i] = n
-                    cum_cost[lv][i] = cum_cost[lv - 1][i]
-                else:
-                    p2 = parent[lv - 1][mid]
-                    parent[lv][i] = p2
-                    cum_cost[lv][i] = cum_cost[lv - 1][i] + cum_cost[lv - 1][mid]
-        
-        total = 0
-        def get_cost(start: int, endd: int) -> int:
-            if endd <= start:
-                return 0
-            nump = endd - start
-            s = prefix[endd + 1] - prefix[start + 1]
-            return nump * nums[start] - s
-        
-        for l in range(n):
-            spent = 0
-            pos = l
-            for bit in range(LOG - 1, -1, -1):
-                if pos == n:
-                    break
-                addc = cum_cost[bit][pos]
-                if spent + addc <= k:
-                    anc = parent[bit][pos]
-                    spent += addc
-                    pos = anc
-            if pos == n:
-                max_rr = n - 1
-            else:
-                remain = k - spent
-                t = next_g[pos]
-                rr = n - 1 if t == n else t - 1
-                lo = pos
-                hi = rr
-                res = pos - 1
+        ans = 0
+        l = 0
+        cost = 0
+        pmax = nums[0]
+        for r in range(n):
+            if r > 0:
+                cost += max(0, pmax - nums[r])
+                pmax = max(pmax, nums[r])
+            while cost > k and l <= r:
+                lo = l + 1
+                hi = r + 1
+                s = r + 1
                 while lo <= hi:
-                    m = lo + (hi - lo + 1) // 2
-                    cc = get_cost(pos, m)
-                    if cc <= remain:
-                        res = m
-                        lo = m + 1
+                    mid = (lo + hi) // 2
+                    if query_max(l + 1, mid) >= nums[l]:
+                        s = mid
+                        hi = mid - 1
                     else:
-                        hi = m - 1
-                max_rr = res
-            total += max_rr - l + 1
-        return total
+                        lo = mid + 1
+                end = s - 1
+                reduction = 0
+                if end >= l + 1:
+                    num_terms = end - l
+                    sum_pm = 0
+                    cur_pos = l + 1
+                    while cur_pos <= end:
+                        cur_maxx = nums[cur_pos]
+                        nextp = ng[cur_pos]
+                        segend = min(end, nextp - 1)
+                        leng = segend - cur_pos + 1
+                        sum_pm += cur_maxx * leng
+                        cur_pos = nextp
+                    reduction = nums[l] * num_terms - sum_pm
+                cost -= reduction
+                if nums[l] == pmax and l + 1 <= r:
+                    pmax = query_max(l + 1, r + 1)
+                l += 1
+            ans += max(0, r - l + 1)
+        return ans
 
 # @lc code=end
