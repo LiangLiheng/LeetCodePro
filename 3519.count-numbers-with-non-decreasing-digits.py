@@ -5,53 +5,63 @@
 #
 
 # @lc code=start
-from functools import lru_cache
-
 class Solution:
     def countNumbers(self, l: str, r: str, b: int) -> int:
-        MOD = 10**9 + 7
+        MOD = 10 ** 9 + 7
+        from functools import lru_cache
 
-        def get_digits(n: int, base: int) -> list[int]:
-            if n == 0:
-                return []
-            digits = []
+        # Convert integer n (in decimal) to base-b as list of ints
+        def to_base(n: int, base: int) -> list:
+            if n == 0: return [0]
+            res = []
             while n > 0:
-                digits.append(n % base)
+                res.append(n % base)
                 n //= base
-            digits.reverse()
-            return digits
+            return res[::-1]
 
-        def count_up_to(s: str, base: int) -> int:
-            n = int(s)
-            D = get_digits(n, base)
-            if not D:
-                return 0
-            L = len(D)
+        # Decrement a decimal string by 1
+        def str_dec_base10(s: str) -> str:
+            n = list(map(int, s))
+            i = len(n) - 1
+            while i >= 0:
+                if n[i] > 0:
+                    n[i] -= 1
+                    break
+                else:
+                    n[i] = 9
+                    i -= 1
+            # Remove leading zeros
+            res = ''.join(map(str, n)).lstrip('0')
+            return res if res else '0'
+
+        # Count numbers <= n_str (decimal string) whose base-b digits are non-decreasing
+        def count(n_str: str) -> int:
+            n = int(n_str)
+            digits = to_base(n, b)
+            sz = len(digits)
+
             @lru_cache(maxsize=None)
-            def dp(pos: int, prev: int, tight: int, started: int) -> int:
-                if pos == L:
-                    return 1 if started == 1 else 0
+            def dp(pos, prev_digit, tight, leading_zero):
+                if pos == sz:
+                    # Valid if number is not only leading zeros (except for number zero itself)
+                    return 0 if leading_zero else 1
                 ans = 0
-                upper = D[pos] if tight == 1 else base - 1
-                for d in range(upper + 1):
-                    ntight = 1 if tight == 1 and d == D[pos] else 0
-                    nstarted = 1 if started == 1 or d > 0 else 0
-                    if nstarted == 0:
-                        ans = (ans + dp(pos + 1, -1, ntight, 0)) % MOD
+                max_digit = digits[pos] if tight else b - 1
+                for d in range(0, max_digit + 1):
+                    next_leading_zero = leading_zero and d == 0
+                    # If still leading zeros, prev_digit stays as -1 (no digit chosen yet), and allow any digit
+                    if next_leading_zero:
+                        # Only allow number zero itself to be counted (when all digits are zero)
+                        ans += dp(pos + 1, -1, tight and d == max_digit, True)
                     else:
-                        if prev != -1 and d < prev:
-                            continue
-                        nprev = d
-                        ans = (ans + dp(pos + 1, nprev, ntight, 1)) % MOD
-                return ans
-            return dp(0, -1, 1, 0)
+                        # If not in leading zeros, enforce non-decreasing constraint
+                        if prev_digit == -1 or d >= prev_digit:
+                            ans += dp(pos + 1, d, tight and d == max_digit, False)
+                return ans % MOD
 
-        res_r = count_up_to(r, b)
-        l_num = int(l)
-        if l_num == 0:
-            res_l = 0
-        else:
-            res_l = count_up_to(str(l_num - 1), b)
-        return (res_r - res_l + MOD) % MOD
+            return dp(0, -1, True, True)
 
+        l_minus_1 = str_dec_base10(l)
+        res = (count(r) - count(l_minus_1)) % MOD
+        return res
 # @lc code=end
