@@ -7,17 +7,20 @@
 # @lc code=start
 class Solution:
     def longestPalindrome(self, s: str, t: str) -> int:
-        n = len(s)
-        m = len(t)
-        ans = 0
+        def is_palindrome(x):
+            return x == x[::-1]
+        max_len = 0
+        n, m = len(s), len(t)
+        # Try all substrings from s
         for i in range(n + 1):
             for j in range(i, n + 1):
-                ss = s[i:j]
+                sub_s = s[i:j]
+                # Try all substrings from t
                 for k in range(m + 1):
                     for l in range(k, m + 1):
-                        st = t[k:l]
-                        comb = ss + st
-                        if comb == comb[::-1]:
-                            ans = max(ans, len(comb))
-        return ans
+                        sub_t = t[k:l]
+                        combined = sub_s + sub_t
+                        if combined and is_palindrome(combined):
+                            max_len = max(max_len, len(combined))
+        return max_len
 # @lc code=end
