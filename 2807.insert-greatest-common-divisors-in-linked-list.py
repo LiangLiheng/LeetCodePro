@@ -10,19 +10,14 @@
 #     def __init__(self, val=0, next=None):
 #         self.val = val
 #         self.next = next
+from math import gcd
 class Solution:
     def insertGreatestCommonDivisors(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        def gcd(a: int, b: int) -> int:
-            while b:
-                a, b = b, a % b
-            return a
-        
-        cur = head
-        while cur and cur.next:
-            g = gcd(cur.val, cur.next.val)
-            new_node = ListNode(g)
-            new_node.next = cur.next
-            cur.next = new_node
-            cur = new_node.next
+        curr = head
+        while curr and curr.next:
+            val1, val2 = curr.val, curr.next.val
+            node = ListNode(gcd(val1, val2), curr.next)
+            curr.next = node
+            curr = node.next
         return head
 # @lc code=end
