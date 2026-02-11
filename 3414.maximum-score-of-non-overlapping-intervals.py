@@ -6,73 +6,73 @@
 
 # @lc code=start
 from typing import List
-import bisect
 
 class Solution:
     def maximumWeight(self, intervals: List[List[int]]) -> List[int]:
         n = len(intervals)
         if n == 0:
             return []
-        # (l, r, w, idx)
-        ints = [(intervals[i][0], intervals[i][1], intervals[i][2], i) for i in range(n)]
-        ints.sort(key=lambda x: x[1])  # sort by r
-        ends = [inter[1] for inter in ints]
-        
-        INF = -1
-        dp_score = [[INF] * 5 for _ in range(n)]
-        dp_path = [[[] for _ in range(5)] for _ in range(n)]
-        prefix_score = [[INF] * 5 for _ in range(n)]
-        prefix_path = [[[] for _ in range(5)] for _ in range(n)]
-        
+        events = [(inter[0], inter[1], inter[2], i) for i, inter in enumerate(intervals)]
+        events.sort(key=lambda x: x[1])
+        K = 4
+        prefix_max = [[0] * (K + 1) for _ in range(n + 1)]
+        prefix_paths = [[[] for _ in range(K + 1)] for _ in range(n + 1)]
         for i in range(n):
-            l, r, w, orig_idx = ints[i]
-            p = bisect.bisect_left(ends, l, 0, i) - 1
-            
-            for j in range(1, 5):
-                if j == 1:
-                    cand_score = w
-                    cand_path = [orig_idx]
+            start, end_time, weight, idx = events[i]
+            # Compute dp for ending at i
+            dp_1 = weight
+            path_1 = [idx]
+            # Binary search for largest m < i s.t. events[m][1] < start
+            left, right = 0, i - 1
+            m = -1
+            while left <= right:
+                mid = left + (right - left) // 2
+                if events[mid][1] < start:
+                    m = mid
+                    left = mid + 1
                 else:
-                    if p >= 0 and prefix_score[p][j - 1] >= 0:
-                        prev_path = prefix_path[p][j - 1][:]
-                        cand_path = sorted(prev_path + [orig_idx])
-                        cand_score = prefix_score[p][j - 1] + w
+                    right = mid - 1
+            temp_dp = [0] * (K + 1)
+            temp_paths = [[] for _ in range(K + 1)]
+            temp_dp[1] = dp_1
+            temp_paths[1] = path_1
+            for j in range(2, K + 1):
+                if m < 0:
+                    break
+                prev_max_s = prefix_max[j - 1][m + 1]
+                if prev_max_s > 0:
+                    new_score = prev_max_s + weight
+                    temp_dp[j] = new_score
+                    prev_path = prefix_paths[j - 1][m + 1][:]
+                    new_path = sorted(prev_path + [idx])
+                    temp_paths[j] = new_path
+            # Update prefix for i+1: max(skip i, take i)
+            for j in range(1, K + 1):
+                score_skip = prefix_max[j][i]
+                path_skip = prefix_paths[j][i]
+                score_take = temp_dp[j]
+                path_take = temp_paths[j]
+                if score_take > score_skip:
+                    prefix_max[j][i + 1] = score_take
+                    prefix_paths[j][i + 1] = path_take
+                elif score_take == score_skip:
+                    prefix_max[j][i + 1] = score_skip
+                    if path_take < path_skip:
+                        prefix_paths[j][i + 1] = path_take
                     else:
-                        cand_score = INF
-                        cand_path = []
-                dp_score[i][j] = cand_score
-                dp_path[i][j] = cand_path
-            
-            # update prefix
-            for j in range(1, 5):
-                prev_prefix_s = prefix_score[i - 1][j] if i > 0 else INF
-                prev_prefix_p = prefix_path[i - 1][j][:] if i > 0 else []
-                this_dp_s = dp_score[i][j]
-                this_dp_p = dp_path[i][j]
-                if this_dp_s > prev_prefix_s:
-                    prefix_score[i][j] = this_dp_s
-                    prefix_path[i][j] = this_dp_p[:]
-                elif this_dp_s == prev_prefix_s and this_dp_s >= 0:
-                    prefix_score[i][j] = this_dp_s  # Critical: propagate score on tie
-                    if tuple(this_dp_p) < tuple(prev_prefix_p):
-                        prefix_path[i][j] = this_dp_p[:]
-                    else:
-                        prefix_path[i][j] = prev_prefix_p[:]
+                        prefix_paths[j][i + 1] = path_skip
                 else:
-                    prefix_score[i][j] = prev_prefix_s
-                    prefix_path[i][j] = prev_prefix_p[:]
-        
-        # find best
+                    prefix_max[j][i + 1] = score_skip
+                    prefix_paths[j][i + 1] = path_skip
+        # Global max score and lex min path
         max_score = 0
-        best_path = []
-        for j in range(1, 5):
-            s = prefix_score[n - 1][j]
-            if s < 0:
-                continue
-            cand = prefix_path[n - 1][j][:]
-            if s > max_score or (s == max_score and tuple(cand) < tuple(best_path)):
-                max_score = s
-                best_path = cand
-        return best_path
+        best_list = []
+        for j in range(1, K + 1):
+            curr_score = prefix_max[j][n]
+            curr_path = prefix_paths[j][n]
+            if curr_score > max_score or (curr_score == max_score and (not best_list or curr_path < best_list)):
+                max_score = curr_score
+                best_list = curr_path
+        return best_list
 
 # @lc code=end
