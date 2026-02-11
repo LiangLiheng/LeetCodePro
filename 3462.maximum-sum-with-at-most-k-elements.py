@@ -3,22 +3,25 @@
 #
 # [3462] Maximum Sum With at Most K Elements
 #
+
 # @lc code=start
+from typing import List
 class Solution:
     def maxSum(self, grid: List[List[int]], limits: List[int], k: int) -> int:
         n = len(grid)
-        elements = []
-        for i in range(n):
-            for num in grid[i]:
-                elements.append((num, i))
-        elements.sort(reverse=True)
-        row_picked = [0] * n
-        total = 0
-        cnt = 0
-        for val, r in elements:
-            if row_picked[r] < limits[r] and cnt < k:
-                total += val
-                row_picked[r] += 1
-                cnt += 1
-        return total
+        dp = [0] + [-float('inf')] * k  # dp[j]: max sum for picking j elements
+        for row, limit in zip(grid, limits):
+            m = len(row)
+            pick_limit = min(limit, m)
+            sorted_row = sorted(row, reverse=True)
+            prefix = [0]
+            for i in range(pick_limit):
+                prefix.append(prefix[-1] + sorted_row[i])
+            ndp = dp[:]
+            for t in range(1, len(prefix)):
+                for j in range(k, t - 1, -1):
+                    if dp[j - t] != -float('inf'):
+                        ndp[j] = max(ndp[j], dp[j - t] + prefix[t])
+            dp = ndp
+        return max(dp)
 # @lc code=end
