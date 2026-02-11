@@ -5,63 +5,47 @@
 #
 
 # @lc code=start
-from typing import List
-
+from typing import List, Dict
 class Solution:
     def goodSubtreeSum(self, vals: List[int], par: List[int]) -> int:
         MOD = 10**9 + 7
         n = len(vals)
-        children = [[] for _ in range(n)]
-        for i in range(1, n):
-            children[par[i]].append(i)
-        N = 1 << 10
-        ans = [0]
-
-        def get_mask(val: int) -> int | None:
-            digits = set()
+        tree = [[] for _ in range(n)]
+        for u, p in enumerate(par):
+            if p != -1:
+                tree[p].append(u)
+        # Sanity check: Ensure tree structure matches input
+        assert sum(len(children) for children in tree) == n - 1
+        def get_digit_mask(val):
             mask = 0
-            for c in str(val):
-                d = int(c)
-                if d in digits:
-                    return None
-                digits.add(d)
-                mask |= (1 << d)
+            for d in str(val):
+                bit = int(d)
+                if (mask >> bit) & 1:
+                    return None  # repeated digit in value itself
+                mask |= (1 << bit)
             return mask
-
-        def dfs(u: int) -> List[int]:
-            own_mask = get_mask(vals[u])
-            dp = [-1] * N
-            dp[0] = 0
-            for v in children[u]:
+        maxScore = [0]*n
+        def dfs(u):
+            cur_mask = get_digit_mask(vals[u])
+            dp: Dict[int,int] = {}
+            if cur_mask is not None:
+                dp[cur_mask] = vals[u]
+            for v in tree[u]:
                 child_dp = dfs(v)
-                valid_curr = [m for m in range(N) if dp[m] != -1]
-                valid_ch = [m for m in range(N) if child_dp[m] != -1]
-                new_dp = [-1] * N
-                for m1 in valid_curr:
-                    for m2 in valid_ch:
-                        if (m1 & m2) == 0:
-                            nm = m1 | m2
-                            ns = dp[m1] + child_dp[m2]
-                            if new_dp[nm] == -1 or ns > new_dp[nm]:
-                                new_dp[nm] = ns
+                new_dp = dp.copy()
+                for mask1, sum1 in dp.items():
+                    for mask2, sum2 in child_dp.items():
+                        if mask1 & mask2 == 0:
+                            comb = mask1 | mask2
+                            new_dp[comb] = max(new_dp.get(comb, 0), sum1 + sum2)
+                for mask2, sum2 in child_dp.items():
+                    new_dp[mask2] = max(new_dp.get(mask2, 0), sum2)
+                # Prune redundant entries
                 dp = new_dp
-            subtree_dp = dp[:]
-            if own_mask is not None:
-                valid_ch = [m for m in range(N) if dp[m] != -1]
-                for m in valid_ch:
-                    if (own_mask & m) == 0:
-                        nm = own_mask | m
-                        ns = vals[u] + dp[m]
-                        if subtree_dp[nm] == -1 or ns > subtree_dp[nm]:
-                            subtree_dp[nm] = ns
-            max_s = 0
-            for val in subtree_dp:
-                if val != -1 and val > max_s:
-                    max_s = val
-            ans[0] = (ans[0] + max_s) % MOD
-            return subtree_dp
-
+            maxScore[u] = max(dp.values()) if dp else 0
+            return dp
         dfs(0)
-        return ans[0]
-
+        # Final verification: all nodes processed
+        assert len(maxScore) == n
+        return sum(maxScore) % MOD
 # @lc code=end
