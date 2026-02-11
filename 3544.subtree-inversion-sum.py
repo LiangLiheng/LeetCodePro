@@ -5,6 +5,9 @@
 #
 
 # @lc code=start
+from typing import List
+from functools import lru_cache
+
 class Solution:
     def subtreeInversionSum(self, edges: List[List[int]], nums: List[int], k: int) -> int:
         n = len(nums)
@@ -12,26 +15,26 @@ class Solution:
         for u, v in edges:
             adj[u].append(v)
             adj[v].append(u)
-        import sys
-        sys.setrecursionlimit(50010)
-        from functools import lru_cache
-        MIN_VAL = - (n * 50001)
-        @lru_cache(maxsize=None)
-        def dfs(u: int, p: int, par: int, d: int) -> int:
-            res = MIN_VAL
-            for flip in [0, 1]:
-                if flip == 1 and d < k:
-                    continue
-                sign = 1 if (par + flip) % 2 == 0 else -1
-                contrib = nums[u] * sign
-                cpar = (par + flip) % 2
-                cd = 1 if flip else min(d + 1, k)
-                tot_child = 0
-                for v in adj[u]:
-                    if v != p:
-                        tot_child += dfs(v, u, cpar, cd)
-                res = max(res, contrib + tot_child)
-            return res
-        return dfs(0, -1, 0, k)
 
+        from sys import setrecursionlimit
+        setrecursionlimit(100000)
+
+        @lru_cache(maxsize=None)
+        def dp(node, parent, dist, sign):
+            curr_val = sign * nums[node]
+            children = [nei for nei in adj[node] if nei != parent]
+            # Option 1: Do not invert at this node
+            sum_no_invert = curr_val
+            for child in children:
+                sum_no_invert += dp(child, node, min(dist+1, k), sign)
+            max_sum = sum_no_invert
+            # Option 2: Invert at this node if allowed by distance constraint
+            if dist >= k:
+                sum_invert = -curr_val
+                for child in children:
+                    sum_invert += dp(child, node, 1, -sign)  # verify update reflects intended meaning
+                max_sum = max(max_sum, sum_invert)
+            return max_sum
+
+        return dp(0, -1, k, 1)
 # @lc code=end
