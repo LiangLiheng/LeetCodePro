@@ -5,49 +5,72 @@
 #
 
 # @lc code=start
-from typing import List
-from collections import Counter
-
 class Solution:
     def minSwaps(self, nums: List[int], forbidden: List[int]) -> int:
+        from collections import Counter, defaultdict, deque
         n = len(nums)
-        num_freq = Counter(nums)
-        fob_freq = Counter(forbidden)
-        bad_freq: dict[int, int] = {}
-        b = 0
+        # Step 1: Feasibility check
+        freq_nums = Counter(nums)
+        freq_forbidden = Counter(forbidden)
+        for val in freq_forbidden:
+            if freq_forbidden[val] > freq_nums[val]:
+                return -1
+        # Step 2: Build a target arrangement
+        # For each index, try to assign a value from nums not forbidden at that index
+        # Start with the multiset of nums values
+        values = Counter(nums)
+        target = [None]*n
         for i in range(n):
-            if nums[i] == forbidden[i]:
-                v = nums[i]
-                bad_freq[v] = bad_freq.get(v, 0) + 1
-                b += 1
-        if b == 0:
-            return 0
-        m = 0
-        v_max = None
-        for v, cnt in bad_freq.items():
-            if cnt > m:
-                m = cnt
-                v_max = v
-        if 2 * m <= b:
-            p = b // 2
-            r = b % 2
-            swaps = b - p
-            if r == 0:
-                return swaps
-            # r == 1, check any v
-            for vv, cnt in bad_freq.items():
-                h = n - num_freq[vv] - fob_freq[vv] - b + 2 * cnt
-                if h >= 1:
-                    return swaps
-            return -1
-        else:
-            p = b - m
-            r = b - 2 * p
-            swaps = b - p
-            cnt = bad_freq[v_max]
-            h = n - num_freq[v_max] - fob_freq[v_max] - b + 2 * cnt
-            if h >= r:
-                return swaps
-            return -1
-
+            # Try to assign any value except forbidden[i] that is available
+            found = False
+            for val in values:
+                if val != forbidden[i] and values[val] > 0:
+                    target[i] = val
+                    values[val] -= 1
+                    found = True
+                    break
+            if not found:
+                # Should not happen due to previous check, but safeguard
+                return -1
+        # Step 3: Map from original nums to target - find cycles
+        # For each index, if nums[i] != target[i], it's part of a cycle
+        visited = [False]*n
+        pos_in_nums = defaultdict(deque)
+        for idx, val in enumerate(nums):
+            pos_in_nums[val].append(idx)
+        # Build mapping from current index to target index for needed swaps
+        index_map = [-1]*n
+        used_in_target = set()
+        for i in range(n):
+            if nums[i] == target[i]:
+                visited[i] = True
+                used_in_target.add(i)
+            else:
+                # Find a position where nums[pos] == target[i]
+                while pos_in_nums[target[i]]:
+                    pos = pos_in_nums[target[i]].popleft()
+                    if pos not in used_in_target and pos != i:
+                        index_map[i] = pos
+                        used_in_target.add(pos)
+                        break
+        # Step 4: Count cycles
+        swaps = 0
+        for i in range(n):
+            if not visited[i] and index_map[i] != -1:
+                # Start a new cycle
+                cycle_len = 0
+                j = i
+                while not visited[j]:
+                    visited[j] = True
+                    j = index_map[j]
+                    cycle_len += 1
+                if cycle_len > 0:
+                    swaps += cycle_len - 1
+        # Step 5: Verify final state
+        # Simulate swaps (optional in this structure, as cycles guarantee assignment)
+        # Check that for all i, target[i] != forbidden[i]
+        for i in range(n):
+            if target[i] == forbidden[i]:
+                return -1
+        return swaps
 # @lc code=end
