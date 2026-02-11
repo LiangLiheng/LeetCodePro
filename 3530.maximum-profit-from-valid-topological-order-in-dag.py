@@ -5,30 +5,30 @@
 #
 
 # @lc code=start
+from typing import List
 class Solution:
     def maxProfit(self, n: int, edges: List[List[int]], score: List[int]) -> int:
-        pred_mask = [0] * n
+        from functools import lru_cache
+        # Build a bitmask for prerequisites of each node
+        prereq = [0] * n
         for u, v in edges:
-            pred_mask[v] |= (1 << u)
-        N = 1 << n
-        memo = [-1] * N
-        popcount = [0] * N
-        for i in range(N):
-            popcount[i] = popcount[i >> 1] + (i & 1)
-        def dfs(mask):
-            if popcount[mask] == n:
+            prereq[v] |= (1 << u)
+
+        @lru_cache(None)
+        def dp(mask):
+            # Base case: all nodes are processed
+            if mask == (1 << n) - 1:
                 return 0
-            if memo[mask] != -1:
-                return memo[mask]
-            pos = popcount[mask] + 1
             res = 0
-            for v in range(n):
-                if (mask & (1 << v)) != 0:
-                    continue
-                if (pred_mask[v] & mask) == pred_mask[v]:
-                    sub = dfs(mask | (1 << v))
-                    res = max(res, score[v] * pos + sub)
-            memo[mask] = res
+            pos = bin(mask).count('1') + 1  # Position is 1-based
+            for i in range(n):
+                # Check if node i is not yet processed
+                if not (mask & (1 << i)):
+                    # Check if all prerequisites of i are already processed
+                    if (prereq[i] & mask) == prereq[i]:
+                        # Node i is available to process next
+                        next_profit = score[i] * pos + dp(mask | (1 << i))
+                        res = max(res, next_profit)
             return res
-        return dfs(0)
+        return dp(0)
 # @lc code=end
