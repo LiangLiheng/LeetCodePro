@@ -5,36 +5,34 @@
 #
 
 # @lc code=start
+from collections import deque
+
 class TextEditor:
 
     def __init__(self):
         self.left = []
-        self.right = []
+        self.right = deque()
 
     def addText(self, text: str) -> None:
         for c in text:
             self.left.append(c)
 
     def deleteText(self, k: int) -> int:
-        cnt = 0
-        for _ in range(k):
-            if self.left:
-                self.left.pop()
-                cnt += 1
-            else:
-                break
-        return cnt
+        deleted = min(k, len(self.left))
+        for _ in range(deleted):
+            self.left.pop()
+        return deleted
 
     def cursorLeft(self, k: int) -> str:
-        for _ in range(k):
-            if self.left:
-                self.right.append(self.left.pop())
+        moves = min(k, len(self.left))
+        for _ in range(moves):
+            self.right.appendleft(self.left.pop())
         return ''.join(self.left[-10:])
 
     def cursorRight(self, k: int) -> str:
-        for _ in range(k):
-            if self.right:
-                self.left.append(self.right.pop())
+        moves = min(k, len(self.right))
+        for _ in range(moves):
+            self.left.append(self.right.popleft())
         return ''.join(self.left[-10:])
 
 
