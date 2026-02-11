@@ -6,33 +6,29 @@
 
 # @lc code=start
 from typing import List
-
 class Solution:
     def maxProduct(self, nums: List[int], k: int, limit: int) -> int:
-        dp = [{}, {}]
-        for num in nums:
-            new_dp = [{}, {}]
-            # skip: carry over previous states
-            for p in range(2):
-                for s, prod in dp[p].items():
-                    new_dp[p][s] = max(new_dp[p].get(s, -1), prod)
-            # append to existing
-            for p in range(2):
-                for s, prod in dp[p].items():
-                    sign = 1 if p == 0 else -1
-                    new_sum = s + sign * num
-                    new_prod = prod * num
-                    if new_prod <= limit:
-                        np = 1 - p
-                        new_dp[np][new_sum] = max(new_dp[np].get(new_sum, -1), new_prod)
-            # start new subsequence
-            if num <= limit:
-                new_dp[1][num] = max(new_dp[1].get(num, -1), num)
-            dp = new_dp
-        ans = -1
-        for p in range(2):
-            if k in dp[p]:
-                ans = max(ans, dp[p][k])
-        return ans
+        from functools import lru_cache
+        n = len(nums)
+        res = -1
 
+        @lru_cache(maxsize=None)
+        def dp(i, alt_sum, parity, prod, used):
+            nonlocal res
+            if i == n:
+                if used > 0 and alt_sum == k and prod <= limit:
+                    res = max(res, prod)
+                return
+            # Skip current element
+            dp(i+1, alt_sum, parity, prod, used)
+            # Include current element, update parity and alternating sum
+            new_prod = prod * nums[i]
+            if new_prod <= limit:
+                if parity == 0:
+                    next_alt_sum = alt_sum + nums[i]
+                else:
+                    next_alt_sum = alt_sum - nums[i]
+                dp(i+1, next_alt_sum, 1-parity, new_prod, used+1)
+        dp(0, 0, 0, 1, 0)
+        return res
 # @lc code=end
