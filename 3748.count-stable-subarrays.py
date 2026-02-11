@@ -5,40 +5,28 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def countStableSubarrays(self, nums: List[int], queries: List[List[int]]) -> List[int]:
         n = len(nums)
-        if n == 0:
-            return []
-        right = [0] * n
-        right[n-1] = n - 1
-        for i in range(n-2, -1, -1):
-            if nums[i] <= nums[i + 1]:
-                right[i] = right[i + 1]
-            else:
-                right[i] = i
-        prefix = [0] * (n + 1)
-        for i in range(n):
-            prefix[i + 1] = prefix[i] + right[i]
-        left_reach = [0] * n
-        ptr = 0
-        for r in range(n):
-            while ptr <= r and right[ptr] < r:
-                ptr += 1
-            left_reach[r] = ptr
+        # Preprocess: For each position, find the end of the maximal non-decreasing run starting at i
+        run_end = [0]*n
+        i = 0
+        while i < n:
+            j = i
+            while j+1 < n and nums[j] <= nums[j+1]:
+                j += 1
+            for k in range(i, j+1):
+                run_end[k] = j
+            i = j+1
         ans = []
         for li, ri in queries:
-            l, r = li, ri
-            length = r - l + 1
-            total = length * (length + 1) // 2
-            correction = 0
-            if left_reach[r] > l:
-                m = left_reach[r] - 1
-                count_bad = m - l + 1
-                sum_right_bad = prefix[m + 1] - prefix[l]
-                correction = count_bad * r - sum_right_bad
-            ans.append(total - correction)
+            cnt = 0
+            i = li
+            while i <= ri:
+                end = min(run_end[i], ri)
+                L = end - i + 1
+                cnt += L*(L+1)//2
+                i = end + 1
+            ans.append(cnt)
         return ans
 # @lc code=end
