@@ -1,8 +1,42 @@
-<solution_variables>
-<solution>
-{
-    "reasoning": "1. Parse task: Given head of non-empty linked list representing non-negative integer (no leading zeros except 0), MSD at head, Node.val 0-9, 1 <= n <= 10^4. Double the number, return new head.\n\n2. Challenges: Process from LSD (tail) for carry propagation to MSD (head); possible extra digit at new head (e.g., 999*2=1998); prefer O(1) extra space.\n\n3. Plan: Reverse list (LSD first), iterate doubling each digit + carry (in-place update), append node if final carry >0, reverse back. Time O(n), Space O(1).\n\n4. Implementation: Helper reverse_ll(node): iterative reverse, return new head. rev_head = reverse_ll(head). carry=0, cur=rev_head, tail=None. While cur: total=cur.val*2 + carry; cur.val = total%10; carry=total//10; tail=cur; cur=cur.next. If carry: tail.next=ListNode(carry). Return reverse_ll(rev_head). Handle Optional[ListNode] import implicitly via template.\n\n5. Verification:\n- [1,8,9] (189): rev[9,8,1]; 18->8 c1; 16+1=17->7 c1; 2+1=3->3 c0; rev[3,7,8] ✓\n- [9,9,9] (999): rev[9,9,9]; 18->8 c1 x3; append 1; rev[1,9,9,8] ✓\n- [5]: rev[5]; 10->0 c1; append1 [0,1]; rev[1,0] ✓\n- [0]: rev[0]; 0->0 ✓\n- [9]: rev[9]; 18->8 c1; append1 [8,1]; rev[1,8] ✓ Carry propagates fully.\n\n6. Before outputting, validate: 'reasoning' purely task-decomposition (no meta/iteration refs)? 'result' single unescaped multiline template code string only (no tags/nesting/escapes)? Regenerate if not. Flat JSON confirmed.",
-    "result": "#\n# @lc app=leetcode id=2816 lang=python3\n#\n# [2816] Double a Number Represented as a Linked List\n#\n\n# @lc code=start\n# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def doubleIt(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        def reverse_ll(node):\n            prev = None\n            while node:\n                nxt = node.next\n                node.next = prev\n                prev = node\n                node = nxt\n            return prev\n        \n        rev_head = reverse_ll(head)\n        \n        carry = 0\n        cur = rev_head\n        tail = None\n        while cur:\n            total = cur.val * 2 + carry\n            cur.val = total % 10\n            carry = total // 10\n            tail = cur\n            cur = cur.next\n        \n        if carry:\n            tail.next = ListNode(carry)\n        \n        return reverse_ll(rev_head)\n# @lc code=end"
-}
-</solution>
-</solution_variables>
+#
+# @lc app=leetcode id=2816 lang=python3
+#
+# [2816] Double a Number Represented as a Linked List
+#
+
+# @lc code=start
+# Definition for singly-linked list.
+# class ListNode:
+#     def __init__(self, val=0, next=None):
+#         self.val = val
+#         self.next = next
+class Solution:
+    def doubleIt(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        def reverse(node):
+            prev = None
+            curr = node
+            while curr:
+                nxt = curr.next
+                curr.next = prev
+                prev = curr
+                curr = nxt
+            return prev
+
+        # Step 1: Reverse the list
+        head = reverse(head)
+        carry = 0
+        curr = head
+        prev = None
+        # Step 2: Double each digit and handle carry
+        while curr:
+            total = curr.val * 2 + carry
+            curr.val = total % 10
+            carry = total // 10
+            prev = curr
+            curr = curr.next
+        # Step 3: If there's a leftover carry, add new node
+        if carry:
+            prev.next = ListNode(carry)
+        # Step 4: Reverse back
+        return reverse(head)
+# @lc code=end
