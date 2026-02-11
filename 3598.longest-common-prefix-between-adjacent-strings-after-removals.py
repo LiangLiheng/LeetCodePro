@@ -5,40 +5,31 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def longestCommonPrefix(self, words: List[str]) -> List[int]:
-        def lcp(a: str, b: str) -> int:
-            res = 0
+        def common_prefix(a, b):
             l = min(len(a), len(b))
-            while res < l and a[res] == b[res]:
-                res += 1
-            return res
+            for i in range(l):
+                if a[i] != b[i]:
+                    return i
+            return l
         n = len(words)
-        answer = [0] * n
-        if n <= 1:
-            return answer
-        prefix_len = [0] * (n - 1)
-        for j in range(n - 1):
-            prefix_len[j] = lcp(words[j], words[j + 1])
-        pre_max = [0] * n
-        for j in range(n - 1):
-            pre_max[j + 1] = max(pre_max[j], prefix_len[j])
-        suf_max = [0] * n
-        suf_max[n - 1] = 0
-        for j in range(n - 2, -1, -1):
-            suf_max[j] = max(suf_max[j + 1], prefix_len[j])
+        if n == 1:
+            return [0]
+        # Precompute all adjacent prefixes
+        prefix = [common_prefix(words[i], words[i+1]) for i in range(n-1)]
+        answer = [0]*n
         for i in range(n):
-            if i == 0:
-                kept_max = 0 if n < 2 else suf_max[1]
-            elif i == n - 1:
-                kept_max = 0 if n < 2 else pre_max[n - 2]
-            else:
-                kept_max = max(pre_max[i - 1], suf_max[i + 1])
-            new_lcp_val = 0
-            if 1 <= i <= n - 2:
-                new_lcp_val = lcp(words[i - 1], words[i + 1])
-            answer[i] = max(kept_max, new_lcp_val)
+            new_prefixes = []
+            # Add unchanged prefixes before the affected area
+            if i > 1:
+                new_prefixes.extend(prefix[:i-1])
+            # Add new/updated prefix between words[i-1] and words[i+1] if both exist
+            if 0 < i < n-1:
+                new_prefixes.append(common_prefix(words[i-1], words[i+1]))
+            # Add unchanged prefixes after the affected area
+            if i < n-2:
+                new_prefixes.extend(prefix[i+1:])
+            answer[i] = max(new_prefixes) if new_prefixes else 0
         return answer
 # @lc code=end
