@@ -5,70 +5,74 @@
 #
 
 # @lc code=start
-class Solution:
-    def pathExistenceQueries(self, n: int, nums: list[int], maxDiff: int, queries: list[list[int]]) -> list[int]:
-        nodes = sorted(range(n), key=lambda i: nums[i])
-        pos = [0] * n
-        for p in range(n):
-            pos[nodes[p]] = p
-        # Compute right_win[p]: farthest right position in 1 hop
-        right_win = [0] * n
-        j = 0
-        for p in range(n):
-            while j < n and nums[nodes[j]] <= nums[nodes[p]] + maxDiff:
-                j += 1
-            right_win[p] = j - 1
-        # Binary lifting jump table: jump[p][k] = position after 2^k max-right hops from p
-        LOG = 18
-        jump = [[0] * LOG for _ in range(n)]
-        for p in range(n):
-            jump[p][0] = right_win[p]
-        for k in range(1, LOG):
-            for p in range(n):
-                mid = jump[p][k - 1]
-                jump[p][k] = jump[mid][k - 1]
-        # Compute comp_right[p]: rightmost position in same component as p
-        comp_right = [-1] * n
-        i = 0
-        while i < n:
-            j = i
-            while j + 1 < n and nums[nodes[j + 1]] - nums[nodes[j]] <= maxDiff:
-                j += 1
-            for p in range(i, j + 1):
-                comp_right[p] = j
-            i = j + 1
-        # Functions for queries
-        def compute_pos(start: int, dd: int) -> int:
-            cur = start
-            k = 0
-            d = dd
-            while d > 0:
-                if d & 1:
-                    cur = jump[cur][k]
-                d >>= 1
-                k += 1
-                if k >= LOG:
-                    break
-            return cur
-        answer = []
-        for qu, qv in queries:
-            pu = pos[qu]
-            pv = pos[qv]
-            if pu > pv:
-                pu, pv = pv, pu
-            if comp_right[pu] < pv:
-                answer.append(-1)
-                continue
-            # Binary search minimal d
-            lo = 0
-            hi = n
-            while lo < hi:
-                mid = (lo + hi) // 2
-                if compute_pos(pu, mid) >= pv:
-                    hi = mid
-                else:
-                    lo = mid + 1
-            answer.append(lo)
-        return answer
+from typing import List, Dict
+from collections import deque, defaultdict
 
+class DSU:
+    def __init__(self, n):
+        self.parent = list(range(n))
+    def find(self, x):
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]
+            x = self.parent[x]
+        return x
+    def union(self, x, y):
+        xr, yr = self.find(x), self.find(y)
+        if xr != yr:
+            self.parent[yr] = xr
+
+class Solution:
+    def pathExistenceQueries(self, n: int, nums: List[int], maxDiff: int, queries: List[List[int]]) -> List[int]:
+        # Step 1: Build adjacency list and DSU
+        indexed_nums = sorted((val, idx) for idx, val in enumerate(nums))
+        adj = [[] for _ in range(n)]
+        dsu = DSU(n)
+        l = 0
+        for r in range(n):
+            while indexed_nums[r][0] - indexed_nums[l][0] > maxDiff:
+                l += 1
+            for i in range(l, r):
+                u, v = indexed_nums[i][1], indexed_nums[r][1]
+                adj[u].append(v)
+                adj[v].append(u)
+                dsu.union(u, v)
+        # Step 2: Verify bidirectional edges and DSU components
+        for u in range(n):
+            for v in adj[u]:
+                assert u in adj[v], "Edge missing in adjacency list"
+                assert dsu.find(u) == dsu.find(v), "DSU component mismatch"
+        # Step 3: Prepare queries and group for batch BFS
+        comp = [dsu.find(i) for i in range(n)]
+        answer = [-1] * len(queries)
+        query_buckets = defaultdict(list)
+        for qi, (u, v) in enumerate(queries):
+            if u == v:
+                answer[qi] = 0
+                continue
+            if comp[u] != comp[v]:
+                answer[qi] = -1
+            else:
+                query_buckets[(comp[u], u)].append((v, qi))
+        # Step 4: Batch BFS for each (component, source)
+        for (comp_id, src), targets in query_buckets.items():
+            target_set = {v for v, _ in targets}
+            qid_map = {v: qi for v, qi in targets}
+            visited = [False] * n
+            dist = [0] * n
+            dq = deque([src])
+            visited[src] = True
+            found = set()
+            while dq and len(found) < len(target_set):
+                node = dq.popleft()
+                for nei in adj[node]:
+                    if not visited[nei]:
+                        visited[nei] = True
+                        dist[nei] = dist[node] + 1
+                        dq.append(nei)
+                        if nei in target_set:
+                            answer[qid_map[nei]] = dist[nei]
+                            found.add(nei)
+        # Step 5: (Optional) Reflect if more batching is needed for large numbers of unique queries
+        # Step 6: Return results
+        return answer
 # @lc code=end
