@@ -5,52 +5,51 @@
 #
 
 # @lc code=start
-from typing import List
-import bisect
-
 class Solution:
     def maxSubstringLength(self, s: str, k: int) -> bool:
-        n = len(s)
         if k == 0:
             return True
-        first_pos = [-1] * 26
-        last_pos = [-1] * 26
-        pos_lists = [[] for _ in range(26)]
-        for i in range(n):
-            c = ord(s[i]) - ord('a')
-            pos_lists[c].append(i)
-            if first_pos[c] == -1:
-                first_pos[c] = i
-            last_pos[c] = i
-        starts = [first_pos[c] for c in range(26) if first_pos[c] != -1]
-        ends_ = [last_pos[c] for c in range(26) if last_pos[c] != -1]
-        special_intervals = []
-        for l in starts:
-            for r in ends_:
-                if l > r:
-                    continue
-                if l == 0 and r == n - 1:
-                    continue
-                is_special = True
-                for cc in range(26):
-                    if not pos_lists[cc]:
-                        continue
-                    plist = pos_lists[cc]
-                    idx = bisect.bisect_left(plist, l)
-                    if idx < len(plist) and plist[idx] <= r:
-                        if first_pos[cc] < l or last_pos[cc] > r:
-                            is_special = False
-                            break
-                if is_special:
-                    special_intervals.append((l, r))
-        special_intervals.sort(key=lambda x: x[1])
-        count = 0
+        from collections import defaultdict
+        n = len(s)
+        # Record first and last occurrence of each character
+        first, last = {}, {}
+        for i, c in enumerate(s):
+            if c not in first:
+                first[c] = i
+            last[c] = i
+        # Gather all valid candidate special substrings
+        candidates = []
+        i = 0
+        while i < n:
+            l = i
+            r = last[s[i]]
+            j = l
+            while j <= r:
+                r = max(r, last[s[j]])
+                j += 1
+            # Check if this substring is not the whole string
+            if r - l + 1 < n:
+                # Validate: all chars appear only inside [l, r]
+                valid = True
+                for idx in range(l, r + 1):
+                    c = s[idx]
+                    if first[c] < l or last[c] > r:
+                        valid = False
+                        break
+                if valid:
+                    candidates.append((l, r))
+            i = r + 1
+        # Select up to k disjoint substrings
+        candidates.sort(key=lambda x: x[1])
+        res = []
         prev_end = -1
-        for l, r in special_intervals:
+        for l, r in candidates:
             if l > prev_end:
-                count += 1
+                res.append((l, r))
                 prev_end = r
-                if count >= k:
+                if len(res) == k:
+                    # Final verification to ensure all intervals are disjoint and valid
+                    # (already ensured by construction and selection)
                     return True
-        return count >= k
+        return False
 # @lc code=end
