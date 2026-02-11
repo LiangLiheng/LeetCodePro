@@ -3,110 +3,90 @@
 #
 # [3382] Maximum Area Rectangle With Point Constraints II
 #
+
 # @lc code=start
-from typing import List
 from collections import defaultdict
-
-class FenwickTree:
-    def __init__(self, size: int):
-        self.size = size
-        self.tree = [0] * (size + 2)
-
-    def update(self, index: int, delta: int) -> None:
-        while index <= self.size:
-            self.tree[index] += delta
-            index += index & -index
-
-    def query(self, index: int) -> int:
-        res = 0
-        while index > 0:
-            res += self.tree[index]
-            index -= index & -index
-        return res
+from typing import List
+import bisect
 
 class Solution:
     def maxRectangleArea(self, xCoord: List[int], yCoord: List[int]) -> int:
         n = len(xCoord)
         if n < 4:
             return -1
-
         x_to_ys = defaultdict(list)
-        for x, y in zip(xCoord, yCoord):
-            x_to_ys[x].append(y)
-
-        for ys in x_to_ys.values():
-            ys.sort()
-
-        segments = defaultdict(list)
-        for x, ys in x_to_ys.items():
-            for p in range(len(ys) - 1):
-                segments[(ys[p], ys[p + 1])].append(x)
-
-        all_x = sorted(x_to_ys.keys())
-        if len(all_x) < 2:
+        for i in range(n):
+            x_to_ys[xCoord[i]].append(yCoord[i])
+        xs = sorted(x_to_ys.keys())
+        m = len(xs)
+        if m < 2:
             return -1
-        xrank = {all_x[i]: i + 1 for i in range(len(all_x))}
+        x_to_idx = {xs[i]: i for i in range(m)}
+        for x in xs:
+            x_to_ys[x] = sorted(x_to_ys[x])
+        tree = [[] for _ in range(4 * m)]
 
-        all_y = sorted(set(yCoord))
-        yrank = {all_y[i]: i + 1 for i in range(len(all_y))}
-        max_yrank = len(all_y)
+        def build(node: int, start: int, end: int) -> None:
+            if start == end:
+                tree[node] = x_to_ys[xs[start]][:]
+                return
+            mid = (start + end) // 2
+            build(2 * node, start, mid)
+            build(2 * node + 1, mid + 1, end)
+            left_ys = tree[2 * node]
+            right_ys = tree[2 * node + 1]
+            i = j = 0
+            merged = []
+            while i < len(left_ys) and j < len(right_ys):
+                if left_ys[i] <= right_ys[j]:
+                    merged.append(left_ys[i])
+                    i += 1
+                else:
+                    merged.append(right_ys[j])
+                    j += 1
+            merged += left_ys[i:]
+            merged += right_ys[j:]
+            tree[node] = merged
 
-        pts = sorted((xrank[x], yrank[y]) for x, y in zip(xCoord, yCoord))
+        build(1, 0, m - 1)
 
-        ans = 0
-        range_queries = []
-        for (yb, yt), slist in segments.items():
-            S = sorted(set(slist))
-            for j in range(len(S) - 1):
-                xl, xr = S[j], S[j + 1]
-                h, w = yt - yb, xr - xl
-                if w <= 0 or h <= 0:
+        def has_point(node: int, nstart: int, nend: int, qstart: int, qend: int, y_low: int, y_high: int) -> bool:
+            if qend < nstart or nend < qstart:
+                return False
+            if qstart <= nstart and nend <= qend:
+                lst = tree[node]
+                idx = bisect.bisect_left(lst, y_low)
+                return idx < len(lst) and lst[idx] <= y_high
+            mid = (nstart + nend) // 2
+            left_has = has_point(2 * node, nstart, mid, qstart, qend, y_low, y_high)
+            if left_has:
+                return True
+            return has_point(2 * node + 1, mid + 1, nend, qstart, qend, y_low, y_high)
+
+        gaps = defaultdict(list)
+        for i in range(m):
+            ys = x_to_ys[xs[i]]
+            for j in range(len(ys) - 1):
+                yb = ys[j]
+                yt = ys[j + 1]
+                gaps[(yb, yt)].append(xs[i])
+
+        max_area = 0
+        for (yb, yt), supp_list in gaps.items():
+            supp_xs = sorted(supp_list)
+            if len(supp_xs) < 2:
+                continue
+            h = yt - yb
+            for k in range(len(supp_xs) - 1):
+                xl = supp_xs[k]
+                xr = supp_xs[k + 1]
+                il = x_to_idx[xl]
+                ir = x_to_idx[xr]
+                if il + 1 >= ir:
+                    max_area = max(max_area, (xr - xl) * h)
                     continue
-                area = w * h
-                lrank = xrank[xl]
-                rrank = xrank[xr]
-                if lrank + 1 > rrank - 1:
-                    ans = max(ans, area)
-                    continue
-                ybr = yrank[yb]
-                ytr = yrank[yt]
-                range_queries.append((lrank, rrank, ybr, ytr, area))
-
-        q = len(range_queries)
-        if q == 0:
-            return -1 if ans == 0 else ans
-
-        prefix_sums = [0] * q
-        prefix_queries = []
-        for qi in range(q):
-            lrank, rrank, ybr, ytr, _ = range_queries[qi]
-            x1 = rrank - 1
-            if x1 >= 1:
-                prefix_queries.append((x1, ytr, qi, 1))
-            ybm1 = ybr - 1
-            if x1 >= 1 and ybm1 >= 1:
-                prefix_queries.append((x1, ybm1, qi, -1))
-            x2 = lrank
-            if x2 >= 1:
-                prefix_queries.append((x2, ytr, qi, -1))
-            if x2 >= 1 and ybm1 >= 1:
-                prefix_queries.append((x2, ybm1, qi, 1))
-
-        prefix_queries.sort(key=lambda t: t[0])
-
-        ft = FenwickTree(max_yrank)
-        pt_idx = 0
-        for x_max, y_max, qi, sgn in prefix_queries:
-            while pt_idx < n and pts[pt_idx][0] <= x_max:
-                ft.update(pts[pt_idx][1], 1)
-                pt_idx += 1
-            qsum = ft.query(y_max)
-            prefix_sums[qi] += sgn * qsum
-
-        for qi in range(q):
-            if prefix_sums[qi] == 0:
-                ans = max(ans, range_queries[qi][4])
-
-        return -1 if ans == 0 else ans
+                if not has_point(1, 0, m - 1, il + 1, ir - 1, yb, yt):
+                    max_area = max(max_area, (xr - xl) * h)
+        return max_area if max_area > 0 else -1
 
 # @lc code=end
