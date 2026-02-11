@@ -7,43 +7,56 @@
 # @lc code=start
 class Solution:
     def popcountDepth(self, n: int, k: int) -> int:
+        from functools import lru_cache
+        # Step 1: Precompute popcount-depth for possible s up to sufficient max_bits
+        max_bits = n.bit_length() + 2  # Sufficiently covers all possible set bit counts
+        depth = [-1] * (max_bits + 1)
+        def get_depth(x):
+            if x == 1:
+                return 0
+            if depth[x] != -1:
+                return depth[x]
+            d = 1 + get_depth(bin(x).count('1'))
+            depth[x] = d
+            return d
+        for s in range(1, max_bits + 1):
+            get_depth(s)
+        # Step 2: Collect valid s for which popcount-depth(s) == k-1
+        valid_s = []
+        for s in range(1, max_bits + 1):
+            if get_depth(s) == k - 1:
+                valid_s.append(s)
+        # Step 3: Count numbers <= n with exactly s set bits
+        def count_numbers(n, s):
+            bits = []
+            tmp = n
+            while tmp:
+                bits.append(tmp & 1)
+                tmp >>= 1
+            bits = bits[::-1]
+            m = len(bits)
+            @lru_cache(None)
+            def dp(pos, cnt, tight):
+                if cnt < 0:
+                    return 0
+                if pos == m:
+                    return 1 if cnt == 0 else 0
+                res = 0
+                up = bits[pos] if tight else 1
+                for b in range(up + 1):
+                    res += dp(pos + 1, cnt - b, tight and (b == up))
+                return res
+            return dp(0, s, True)
+        # Step 5: Handle special case k == 0
         if k == 0:
-            return 1
-        
-        def get_depth(x: int) -> int:
-            depth = 0
-            while x > 1:
-                x = bin(x).count('1')
-                depth += 1
-            return depth
-        
-        good_s = [s for s in range(1, 65) if get_depth(s) == k - 1]
-        
-        def count(target: int) -> int:
-            bin_n_str = bin(n)[2:]
-            L = len(bin_n_str)
-            dp = [[[0 for _ in range(2)] for _ in range(target + 1)] for _ in range(L + 1)]
-            
-            for ti in range(2):
-                for ones in range(target + 1):
-                    dp[L][ones][ti] = 1 if ones == target else 0
-            
-            for pos in range(L - 1, -1, -1):
-                for ones in range(target + 1):
-                    for ti in range(2):
-                        upper = 1 if ti == 0 else int(bin_n_str[pos])
-                        val = 0
-                        for d in range(upper + 1):
-                            new_ti = 1 if ti == 1 and d == upper else 0
-                            new_ones = ones + d
-                            if new_ones > target:
-                                continue
-                            val += dp[pos + 1][new_ones][new_ti]
-                        dp[pos][ones][ti] = val
-            return dp[0][0][1]
-        
-        ans = sum(count(s) for s in good_s)
+            return 1 if n >= 1 else 0
+        # Step 4: Sum results for all valid s and verify full coverage
+        ans = 0
+        for s in valid_s:
+            ans += count_numbers(n, s)
+        # Exclude x=0 (not in [1, n]) if needed
         if k == 1:
             ans -= 1
+        # Step 6: Final verification is implicit in code structure and coverage
         return ans
 # @lc code=end
