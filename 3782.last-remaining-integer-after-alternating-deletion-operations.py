@@ -7,20 +7,15 @@
 # @lc code=start
 class Solution:
     def lastInteger(self, n: int) -> int:
-        start = 1
+        head = 1
         step = 1
-        length = n
-        is_left_turn = True
-        while length > 1:
-            new_length = (length + 1) // 2
-            if not is_left_turn:
-                # Operation 2 (right delete): shift start if even length
-                if length % 2 == 0:
-                    start += step
-            # Always double step for both operations
+        left = True
+        remaining = n
+        while remaining > 1:
+            if left or remaining % 2 == 1:
+                head += step
             step *= 2
-            length = new_length
-            is_left_turn = not is_left_turn
-        return start
-
+            remaining //= 2
+            left = not left
+        return head
 # @lc code=end
