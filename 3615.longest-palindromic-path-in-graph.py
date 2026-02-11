@@ -6,33 +6,37 @@
 
 # @lc code=start
 from typing import List
-from functools import lru_cache
+from collections import defaultdict
 
 class Solution:
     def maxLen(self, n: int, edges: List[List[int]], label: str) -> int:
-        adj = [[] for _ in range(n)]
-        for a, b in edges:
-            adj[a].append(b)
-            adj[b].append(a)
-        popcount = [0] * (1 << n)
-        for i in range(1 << n):
-            popcount[i] = popcount[i >> 1] + (i & 1)
-        @lru_cache(maxsize=None)
-        def dfs(u: int, v: int, mask: int) -> int:
-            ans = popcount[mask]
-            for x in adj[u]:
-                if (mask & (1 << x)) == 0:
-                    for y in adj[v]:
-                        if x != y and (mask & (1 << y)) == 0 and label[x] == label[y]:
-                            new_mask = mask | (1 << x) | (1 << y)
-                            ans = max(ans, dfs(x, y, new_mask))
-            return ans
-        max_len = 1
-        for i in range(n):
-            max_len = max(max_len, dfs(i, i, 1 << i))
-            for j in adj[i]:
-                if label[i] == label[j]:
-                    msk = (1 << i) | (1 << j)
-                    max_len = max(max_len, dfs(i, j, msk))
-        return max_len
+        adj = defaultdict(list)
+        for u, v in edges:
+            adj[u].append(v)
+            adj[v].append(u)
+
+        def is_palindrome(s):
+            return s == s[::-1]
+
+        maxlen = 1
+        memo = dict()
+        
+        def dfs(node, visited, path):
+            nonlocal maxlen
+            state = (node, visited)
+            if state in memo and memo[state] >= len(path):
+                return
+            memo[state] = len(path)
+            if is_palindrome(path):
+                maxlen = max(maxlen, len(path))
+            # Prune if remaining nodes + len(path) <= maxlen
+            if len(path) + (n - bin(visited).count('1')) <= maxlen:
+                return
+            for nei in adj[node]:
+                if not (visited & (1 << nei)):
+                    dfs(nei, visited | (1 << nei), path + label[nei])
+
+        for start in range(n):
+            dfs(start, 1 << start, label[start])
+        return maxlen
 # @lc code=end
