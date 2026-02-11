@@ -7,68 +7,68 @@
 # @lc code=start
 class Solution:
     def maxDifference(self, s: str, k: int) -> int:
-        import bisect
         n = len(s)
-        prefix = [[0] * 5 for _ in range(n + 1)]
-        for i in range(1, n + 1):
-            c = ord(s[i - 1]) - ord('0')
-            prefix[i] = prefix[i - 1][:]
-            prefix[i][c] += 1
-        ans = -10**9 - 1
+        prefix = [[0] * (n + 1) for _ in range(5)]
+        for p in range(1, n + 1):
+            c = ord(s[p - 1]) - ord('0')
+            for j in range(5):
+                prefix[j][p] = prefix[j][p - 1] + (1 if j == c else 0)
+        INF = 10**18 + 7
+        ans = -INF
+        N = n + 10
+        class SegTree:
+            def __init__(self, nn: int):
+                self.sz = 1
+                while self.sz < nn + 1:
+                    self.sz <<= 1
+                self.tree = [INF] * (2 * self.sz)
+            def update(self, idx: int, val: int):
+                idx += self.sz
+                self.tree[idx] = min(self.tree[idx], val)
+                idx >>= 1
+                while idx >= 1:
+                    self.tree[idx] = min(self.tree[2 * idx], self.tree[2 * idx + 1])
+                    idx >>= 1
+            def query(self, left: int, right: int) -> int:
+                res = INF
+                l = left + self.sz
+                r = right + self.sz
+                while l <= r:
+                    if l & 1:
+                        res = min(res, self.tree[l])
+                        l += 1
+                    if not (r & 1):
+                        res = min(res, self.tree[r])
+                        r -= 1
+                    l >>= 1
+                    r >>= 1
+                return res
         for a in range(5):
             for b in range(5):
-                if a == b:
-                    continue
-                pa_list = [prefix[i][a] % 2 for i in range(n + 1)]
-                pb_list = [prefix[i][b] % 2 for i in range(n + 1)]
-                dp = [prefix[i][a] - prefix[i][b] for i in range(n + 1)]
-                groups = [[] for _ in range(4)]
-                for i in range(n + 1):
-                    state = (pa_list[i] << 1) | pb_list[i]
-                    groups[state].append(i)
-                prefix_mins = []
-                for st in range(4):
-                    poss = groups[st]
-                    if not poss:
-                        prefix_mins.append([])
-                        continue
-                    m = len(poss)
-                    pm = [0] * m
-                    pm[0] = dp[poss[0]]
-                    for j in range(1, m):
-                        pm[j] = min(pm[j - 1], dp[poss[j]])
-                    prefix_mins.append(pm)
-                for right_idx in range(k, n + 1):
-                    target_pa_left = 1 ^ pa_list[right_idx]
-                    target_pb_left = pb_list[right_idx]
-                    target_st = (target_pa_left << 1) | target_pb_left
-                    max_l_len = right_idx - k
-                    if max_l_len < 0:
-                        continue
-                    max_cb = prefix[right_idx][b] - 2
-                    if max_cb < 0:
-                        continue
-                    # bin search largest <= max_l_len with prefix[..][b] <= max_cb
-                    l, r = 0, max_l_len + 1
-                    while l < r:
-                        mid = (l + r) // 2
-                        if prefix[mid][b] <= max_cb:
-                            l = mid + 1
-                        else:
-                            r = mid
-                    l_max_cb = l - 1
-                    if l_max_cb < 0 or prefix[l_max_cb][b] > max_cb:
-                        continue
-                    l_max = min(max_l_len, l_max_cb)
-                    poss = groups[target_st]
-                    if not poss:
-                        continue
-                    j = bisect.bisect_right(poss, l_max) - 1
-                    if j < 0:
-                        continue
-                    min_dpl = prefix_mins[target_st][j]
-                    cur = dp[right_idx] - min_dpl
-                    ans = max(ans, cur)
-        return -1 if ans == -10**9 - 1 else ans
+                parity_a = [prefix[a][p] % 2 for p in range(n + 1)]
+                parity_b = [prefix[b][p] % 2 for p in range(n + 1)]
+                val = [prefix[a][p] - prefix[b][p] for p in range(n + 1)]
+                preb = prefix[b]
+                segs = [[SegTree(N) for _ in range(2)] for _ in range(2)]
+                current_lp = 0
+                for rp in range(k, n + 1):
+                    maxlp = rp - k
+                    while current_lp <= maxlp:
+                        pa_ = parity_a[current_lp]
+                        pb_ = parity_b[current_lp]
+                        cb = preb[current_lp]
+                        v = val[current_lp]
+                        segs[pa_][pb_].update(cb, v)
+                        current_lp += 1
+                    M = preb[rp] - 2
+                    if M >= 0:
+                        t_pa = 1 - parity_a[rp]
+                        t_pb = parity_b[rp]
+                        minv = segs[t_pa][t_pb].query(0, M)
+                        if minv < INF:
+                            ans = max(ans, val[rp] - minv)
+        if ans == -INF:
+            return -1
+        return ans
 
 # @lc code=end
