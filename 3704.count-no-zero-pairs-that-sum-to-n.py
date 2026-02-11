@@ -7,45 +7,24 @@
 # @lc code=start
 class Solution:
     def countNoZeroPairs(self, n: int) -> int:
-        s = str(n)
-        L = len(s)
-        digits = [int(c) for c in s[::-1]]
-        total = 0
-        for la in range(1, L + 1):
-            allowed_a = [[] for _ in range(L)]
-            msb_a = la - 1
-            for p in range(L):
-                if p > msb_a:
-                    allowed_a[p] = [0]
-                elif p == msb_a:
-                    allowed_a[p] = list(range(1, 10))
-                else:
-                    allowed_a[p] = list(range(1, 10))
-            for lb in range(1, L + 1):
-                allowed_b = [[] for _ in range(L)]
-                msb_b = lb - 1
-                for p in range(L):
-                    if p > msb_b:
-                        allowed_b[p] = [0]
-                    elif p == msb_b:
-                        allowed_b[p] = list(range(1, 10))
-                    else:
-                        allowed_b[p] = list(range(1, 10))
-                memo = [[-1] * 3 for _ in range(L + 1)]
-                def rec(pos: int, carry: int) -> int:
-                    if pos == L:
-                        return 1 if carry == 0 else 0
-                    if memo[pos][carry] != -1:
-                        return memo[pos][carry]
-                    res = 0
-                    for da in allowed_a[pos]:
-                        for db in allowed_b[pos]:
-                            tot = da + db + carry
-                            if tot % 10 == digits[pos]:
-                                ncarry = tot // 10
-                                res += rec(pos + 1, ncarry)
-                    memo[pos][carry] = res
-                    return res
-                total += rec(0, 0)
-        return total
+        # Improved approach: systematically construct all no-zero pairs (a, b) such that a + b = n
+        from functools import lru_cache
+        digits = list(map(int, str(n)))[::-1]  # least to most significant
+        L = len(digits)
+
+        @lru_cache(None)
+        def dp(pos, carry):
+            if pos == L:
+                # At the end, only count if carry is zero
+                return 1 if carry == 0 else 0
+            res = 0
+            nd = digits[pos]
+            # Try all possible pairs of no-zero digits (1..9)
+            for a in range(1, 10):
+                for b in range(1, 10):
+                    s = a + b + carry
+                    if s % 10 == nd:
+                        res += dp(pos + 1, s // 10)
+            return res
+        return dp(0, 0)
 # @lc code=end
