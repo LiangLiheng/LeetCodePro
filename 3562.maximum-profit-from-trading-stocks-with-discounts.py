@@ -6,61 +6,56 @@
 
 # @lc code=start
 from typing import List
+import math
 
 class Solution:
     def maxProfit(self, n: int, present: List[int], future: List[int], hierarchy: List[List[int]], budget: int) -> int:
-        present = [0] + present
-        future = [0] + future
-        adj = [[] for _ in range(n + 1)]
-        for a, b in hierarchy:
-            adj[a].append(b)
-        INF = 10**9 + 7
-        memo = {}
-
-        def dfs(u: int, disc: int):
-            key = (u, disc)
-            if key in memo:
-                return memo[key]
-            cost = present[u] // 2 if disc else present[u]
-            prof = future[u] - cost
-            children = adj[u]
-            comb0 = combine(children, 0)
-            comb1 = combine(children, 1)
-            dp_no = comb0[:]
-            dp_yes = [-INF] * (budget + 1)
-            for k in range(budget + 1):
-                if k >= cost:
-                    dp_yes[k] = prof + comb1[k - cost]
-            memo[key] = (dp_no, dp_yes)
-            return memo[key]
-
-        def combine(children: list[int], dchild: int):
-            B = budget
-            comb = [0] * (B + 1)
-            for v in children:
-                c_no, c_yes = dfs(v, dchild)
-                child_max = [0] * (B + 1)
-                for j in range(B + 1):
-                    mx = c_no[j]
-                    if c_yes[j] > -INF:
-                        mx = max(mx, c_yes[j])
-                    child_max[j] = mx
-                new_comb = [-INF] * (B + 1)
-                for p in range(B + 1):
-                    for m in range(B - p + 1):
-                        new_comb[p + m] = max(new_comb[p + m], comb[p] + child_max[m])
-                for j in range(1, B + 1):
-                    new_comb[j] = max(new_comb[j], new_comb[j - 1])
-                comb = new_comb
-            return comb
-
-        if n == 0:
-            return 0
-        dp_no, dp_yes = dfs(1, 0)
+        from collections import defaultdict
+        
+        # Build tree from the hierarchy
+        tree = [[] for _ in range(n)]
+        parent = [-1] * n
+        for u, v in hierarchy:
+            tree[u-1].append(v-1)
+            parent[v-1] = u-1
+        root = 0  # CEO is always node 0
+        
+        # DP function: returns two arrays, dp0, dp1 per node
+        # dp0[b]: max profit with budget b, boss did NOT buy
+        # dp1[b]: max profit with budget b, boss DID buy
+        def dfs(u):
+            dp0 = [0] + [-math.inf] * budget
+            dp1 = [0] + [-math.inf] * budget
+            cost_nodisc = present[u]
+            profit_nodisc = future[u] - cost_nodisc
+            cost_disc = present[u] // 2
+            profit_disc = future[u] - cost_disc
+            for v in tree[u]:
+                child_dp0, child_dp1 = dfs(v)
+                ndp0 = [-math.inf] * (budget+1)
+                ndp1 = [-math.inf] * (budget+1)
+                for b in range(budget+1):
+                    if dp0[b] != -math.inf:
+                        for cb in range(budget-b+1):
+                            if child_dp0[cb] != -math.inf:
+                                ndp0[b+cb] = max(ndp0[b+cb], dp0[b] + child_dp0[cb])
+                for b in range(budget+1):
+                    if dp1[b] != -math.inf:
+                        for cb in range(budget-b+1):
+                            if child_dp1[cb] != -math.inf:
+                                ndp1[b+cb] = max(ndp1[b+cb], dp1[b] + child_dp1[cb])
+                dp0 = ndp0
+                dp1 = ndp1
+            for b in range(budget, cost_nodisc-1, -1):
+                if dp0[b-cost_nodisc] != -math.inf:
+                    dp0[b] = max(dp0[b], dp0[b-cost_nodisc] + profit_nodisc)
+            for b in range(budget, cost_disc-1, -1):
+                if dp1[b-cost_disc] != -math.inf:
+                    dp1[b] = max(dp1[b], dp1[b-cost_disc] + profit_disc)
+            return dp0, dp1
+        dp0, dp1 = dfs(root)
         ans = 0
-        for k in range(budget + 1):
-            ans = max(ans, dp_no[k])
-            if dp_yes[k] > -INF:
-                ans = max(ans, dp_yes[k])
+        for b in range(budget+1):
+            ans = max(ans, dp0[b], dp1[b])
         return ans
 # @lc code=end
