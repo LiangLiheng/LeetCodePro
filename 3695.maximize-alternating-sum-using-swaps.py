@@ -9,33 +9,32 @@ class Solution:
     def maxAlternatingSum(self, nums: List[int], swaps: List[List[int]]) -> int:
         n = len(nums)
         parent = list(range(n))
-        rank = [0] * n
         def find(x):
             if parent[x] != x:
                 parent[x] = find(parent[x])
             return parent[x]
         def union(x, y):
-            px = find(x)
-            py = find(y)
-            if px == py:
-                return
-            if rank[px] < rank[py]:
+            px, py = find(x), find(y)
+            if px != py:
                 parent[px] = py
-            elif rank[px] > rank[py]:
-                parent[py] = px
-            else:
-                parent[py] = px
-                rank[px] += 1
         for a, b in swaps:
             union(a, b)
-        groups = {}
+        from collections import defaultdict
+        groups = defaultdict(list)
         for i in range(n):
-            root = find(i)
-            groups.setdefault(root, []).append(i)
+            groups[find(i)].append(i)
+        res = [0]*n
+        for indices in groups.values():
+            vals = [nums[i] for i in indices]
+            indices.sort()
+            vals.sort(reverse=True)
+            for idx, val in zip(indices, vals):
+                res[idx] = val
         ans = 0
-        for group in groups.values():
-            vals = sorted(nums[i] for i in group)
-            num_minus = sum(i % 2 == 1 for i in group)
-            ans += sum(vals[num_minus:]) - sum(vals[:num_minus])
+        for i,v in enumerate(res):
+            if i%2==0:
+                ans += v
+            else:
+                ans -= v
         return ans
 # @lc code=end
