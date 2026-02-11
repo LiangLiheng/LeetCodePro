@@ -5,32 +5,30 @@
 #
 
 # @lc code=start
-from typing import List
-import math
 class Solution:
     def maxScore(self, points: List[int], m: int) -> int:
+        import math
         n = len(points)
-        def greedy(req):
-            s = 0
-            mv = 0
-            for r in req:
-                a = s + 1
-                ad = max(0, r - a)
-                mv += 2 * ad
-                s = max(0, a - r) + ad
-            return mv + len(req)
-        def check(x: int) -> bool:
-            req = [(x + p - 1) // p for p in points]
-            forward = greedy(req)
-            backward = greedy(req[::-1])
-            return max(forward, backward) <= m  # conservative upper bound, avoids false positives
-        min_p = min(points)
-        left, right = 0, min_p * m + 1
-        while left < right:
-            mid = left + (right - left + 1) // 2
-            if check(mid):
-                left = mid
+
+        def feasible(target):
+            # For each index, compute minimal number of visits to reach at least target score
+            # i.e., ceil(target / points[i])
+            total = 0
+            for p in points:
+                need = (target + p - 1) // p
+                total += need
+                if total > m:
+                    return False
+            return total <= m
+
+        low, high = 0, max(points) * m
+        answer = 0
+        while low <= high:
+            mid = (low + high) // 2
+            if feasible(mid):
+                answer = mid
+                low = mid + 1
             else:
-                right = mid - 1
-        return left
+                high = mid - 1
+        return answer
 # @lc code=end
