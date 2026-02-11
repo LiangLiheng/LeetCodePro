@@ -1,0 +1,18 @@
+#
+# @lc app=leetcode id=3513 lang=java
+#
+# [3513] Number of Unique XOR Triplets I
+#
+
+# @lc code=start
+class Solution {
+    public int uniqueXorTriplets(int[] nums) {
+        int n = nums.length;
+        if (n <= 2) {
+            return n;
+        }
+        int lz = Integer.numberOfLeadingZeros(n);
+        return 1 << (32 - lz);
+    }
+}
+# @lc code=end
