@@ -6,73 +6,42 @@
 
 # @lc code=start
 from typing import List
+import bisect
 
 class Solution:
     def maximumWeight(self, intervals: List[List[int]]) -> List[int]:
         n = len(intervals)
-        if n == 0:
-            return []
-        events = [(inter[0], inter[1], inter[2], i) for i, inter in enumerate(intervals)]
-        events.sort(key=lambda x: x[1])
-        K = 4
-        prefix_max = [[0] * (K + 1) for _ in range(n + 1)]
-        prefix_paths = [[[] for _ in range(K + 1)] for _ in range(n + 1)]
+        # Append original indices to each interval
+        intervals = [interval + [i] for i, interval in enumerate(intervals)]
+        # Sort by end time, then by index for lex order
+        intervals.sort(key=lambda x: (x[1], x[3]))
+        ends = [itv[1] for itv in intervals]
+        # Precompute for each interval the last non-overlapping interval
+        prev = []
         for i in range(n):
-            start, end_time, weight, idx = events[i]
-            # Compute dp for ending at i
-            dp_1 = weight
-            path_1 = [idx]
-            # Binary search for largest m < i s.t. events[m][1] < start
-            left, right = 0, i - 1
-            m = -1
-            while left <= right:
-                mid = left + (right - left) // 2
-                if events[mid][1] < start:
-                    m = mid
-                    left = mid + 1
-                else:
-                    right = mid - 1
-            temp_dp = [0] * (K + 1)
-            temp_paths = [[] for _ in range(K + 1)]
-            temp_dp[1] = dp_1
-            temp_paths[1] = path_1
-            for j in range(2, K + 1):
-                if m < 0:
-                    break
-                prev_max_s = prefix_max[j - 1][m + 1]
-                if prev_max_s > 0:
-                    new_score = prev_max_s + weight
-                    temp_dp[j] = new_score
-                    prev_path = prefix_paths[j - 1][m + 1][:]
-                    new_path = sorted(prev_path + [idx])
-                    temp_paths[j] = new_path
-            # Update prefix for i+1: max(skip i, take i)
-            for j in range(1, K + 1):
-                score_skip = prefix_max[j][i]
-                path_skip = prefix_paths[j][i]
-                score_take = temp_dp[j]
-                path_take = temp_paths[j]
-                if score_take > score_skip:
-                    prefix_max[j][i + 1] = score_take
-                    prefix_paths[j][i + 1] = path_take
-                elif score_take == score_skip:
-                    prefix_max[j][i + 1] = score_skip
-                    if path_take < path_skip:
-                        prefix_paths[j][i + 1] = path_take
-                    else:
-                        prefix_paths[j][i + 1] = path_skip
-                else:
-                    prefix_max[j][i + 1] = score_skip
-                    prefix_paths[j][i + 1] = path_skip
-        # Global max score and lex min path
-        max_score = 0
-        best_list = []
-        for j in range(1, K + 1):
-            curr_score = prefix_max[j][n]
-            curr_path = prefix_paths[j][n]
-            if curr_score > max_score or (curr_score == max_score and (not best_list or curr_path < best_list)):
-                max_score = curr_score
-                best_list = curr_path
-        return best_list
-
+            l = intervals[i][0]
+            # Find rightmost j < i where intervals[j][1] < l
+            j = bisect.bisect_left(ends, l) - 1
+            prev.append(j)
+        # DP: dp[i][k] = (score, path). 0-based i, k intervals used up to i
+        # Initialize
+        dp = [[(0, []) for _ in range(5)] for _ in range(n+1)]
+        for i in range(1, n+1):
+            for k in range(1, 5):
+                # Not pick i-1th interval
+                best = dp[i-1][k]
+                # Pick i-1th interval, if possible
+                j = prev[i-1]
+                score, path = dp[j+1][k-1]
+                cand = (score + intervals[i-1][2], path + [intervals[i-1][3]])
+                # Compare by score, then lex
+                if cand[0] > best[0] or (cand[0] == best[0] and cand[1] < best[1]):
+                    best = cand
+                dp[i][k] = best
+        # Find best among dp[n][1], dp[n][2], dp[n][3], dp[n][4]
+        answer = (0, [])
+        for k in range(1, 5):
+            if dp[n][k][0] > answer[0] or (dp[n][k][0] == answer[0] and dp[n][k][1] < answer[1]):
+                answer = dp[n][k]
+        return answer[1]
 # @lc code=end
