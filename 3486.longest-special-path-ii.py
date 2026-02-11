@@ -5,98 +5,47 @@
 #
 
 # @lc code=start
-from typing import List
-import sys
-from collections import deque
-
+from collections import defaultdict, Counter
 class Solution:
     def longestSpecialPath(self, edges: List[List[int]], nums: List[int]) -> List[int]:
         n = len(nums)
-        adj = [[] for _ in range(n)]
-        for a, b, w in edges:
-            adj[a].append((b, w))
-            adj[b].append((a, w))
-        children = [[] for _ in range(n)]
-        visited = [False] * n
-        q = deque([0])
-        visited[0] = True
-        while q:
-            u = q.popleft()
-            for v, w in adj[u]:
-                if not visited[v]:
-                    visited[v] = True
-                    children[u].append((v, w))
-                    q.append(v)
-        MAX_VAL = 50010
-        freq = [0] * MAX_VAL
-        path_values = []
-        cum_len = []
-        left = 0
-        max_len = 0
-        min_nodes = float('inf')
-        num_dupes = 0
-        num_over = 0
+        tree = defaultdict(list)
+        for u, v, l in edges:
+            tree[u].append((v, l))
+            tree[v].append((u, l))
 
-        def add(pos):
-            nonlocal num_dupes, num_over
-            val = path_values[pos]
-            old = freq[val]
-            freq[val] += 1
-            newv = freq[val]
-            if old == 1 and newv == 2:
-                num_dupes += 1
-            elif old == 2 and newv == 3:
-                num_dupes -= 1
-                num_over += 1
+        self.max_len = 0
+        self.min_nodes = float('inf')
 
-        def remove(pos):
-            nonlocal num_dupes, num_over
-            val = path_values[pos]
-            old = freq[val]
-            freq[val] -= 1
-            newv = freq[val]
-            if old == 2 and newv == 1:
-                num_dupes -= 1
-            elif old == 3 and newv == 2:
-                num_over -= 1
-                num_dupes += 1
+        # Helper to check the special path constraint
+        def is_valid(counter):
+            duplicates = 0
+            for count in counter.values():
+                if count == 2:
+                    duplicates += 1
+                elif count > 2:
+                    return False
+            return duplicates <= 1
 
-        def is_valid():
-            return num_over == 0 and num_dupes <= 1
+        def dfs(u, parent, path_counter, cur_len, cur_nodes):
+            val = nums[u]
+            path_counter[val] += 1
 
-        def update_global(plen, pnodes):
-            nonlocal max_len, min_nodes
-            if plen > max_len or (plen == max_len and pnodes < min_nodes):
-                max_len = plen
-                min_nodes = pnodes
+            if is_valid(path_counter):
+                if cur_len > self.max_len:
+                    self.max_len = cur_len
+                    self.min_nodes = cur_nodes
+                elif cur_len == self.max_len:
+                    self.min_nodes = min(self.min_nodes, cur_nodes)
+                for v, l in tree[u]:
+                    if v == parent:
+                        continue
+                    dfs(v, u, path_counter, cur_len + l, cur_nodes + 1)
+            # Backtrack
+            path_counter[val] -= 1
 
-        sys.setrecursionlimit(100010)
-
-        def dfs(u: int, par: int, w_from_par: int):
-            nonlocal left
-            path_values.append(nums[u])
-            if len(cum_len) == 0:
-                cum_len.append(0)
-            else:
-                cum_len.append(cum_len[-1] + w_from_par)
-            curr_pos = len(path_values) - 1
-            add(curr_pos)
-            while left <= curr_pos and not is_valid():
-                remove(left)
-                left += 1
-            plen = cum_len[-1] - (cum_len[left - 1] if left > 0 else 0)
-            pnodes = curr_pos - left + 1
-            update_global(plen, pnodes)
-            saved_left = left
-            for v, w in children[u]:
-                dfs(v, u, w)
-                for i in range(saved_left, left):
-                    add(i)
-                left = saved_left
-            remove(curr_pos)
-            path_values.pop()
-            cum_len.pop()
-
-        dfs(0, -1, 0)
-        return [max_len, int(min_nodes)]
+        dfs(0, -1, Counter(), 0, 1)
+        # After traversal, double-check that answer meets constraints
+        # (already ensured by is_valid during traversal)
+        return [self.max_len, self.min_nodes]
 # @lc code=end
