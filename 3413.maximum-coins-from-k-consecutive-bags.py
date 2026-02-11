@@ -10,58 +10,55 @@ import bisect
 
 class Solution:
     def maximumCoins(self, coins: List[List[int]], k: int) -> int:
-        if not coins:
+        if k == 0:
             return 0
-        coins.sort(key=lambda x: x[0])
-        m = len(coins)
-        L = [c[0] for c in coins]
-        R = [c[1] for c in coins]
-        C = [c[2] for c in coins]
-        LEN = [R[i] - L[i] + 1 for i in range(m)]
-        prefix_coin = [0] * (m + 1)
+        events = []
+        for li, ri, ci in coins:
+            events.append((li, ci))
+            events.append((ri + 1, -ci))
+        events.sort(key=lambda e: (e[0], -e[1]))
+        pos_set = set(e[0] for e in events)
+        pos_list = sorted(pos_set)
+        m = len(pos_list)
+        if m == 0:
+            return 0
+        prefix_s = [0] * (m + 1)
+        density_after = [0] * m
+        jj = 0  # renamed to avoid conflict with loop var
+        cur_density = 0
+        cur_s = 0
+        last_pos = 0
         for i in range(m):
-            prefix_coin[i + 1] = prefix_coin[i] + C[i] * LEN[i]
-        def get_coin(p: int) -> int:
-            j = bisect.bisect_left(L, p + 1)
-            if j > 0 and L[j - 1] <= p <= R[j - 1]:
-                return C[j - 1]
-            return 0
-        def get_prefix(x: int) -> int:
+            p = pos_list[i]
+            if p > last_pos + 1:
+                num_bags = p - last_pos - 1
+                cur_s += cur_density * num_bags
+            while jj < len(events) and events[jj][0] == p:
+                cur_density += events[jj][1]
+                jj += 1
+            cur_s += cur_density
+            prefix_s[i + 1] = cur_s
+            density_after[i] = cur_density
+            last_pos = p
+        def get_S(x: int) -> int:
             if x < 1:
                 return 0
-            j = bisect.bisect_left(L, x + 1)
-            if j == 0:
+            idx = bisect.bisect_right(pos_list, x) - 1
+            if idx < 0:
                 return 0
-            if L[j - 1] <= x <= R[j - 1]:
-                return prefix_coin[j - 1] + C[j - 1] * (x - L[j - 1] + 1)
-            return prefix_coin[j]
-        changes = set()
-        for i in range(m):
-            changes.add(L[i])
-            changes.add(R[i] + 1)
-        crit_s = set(changes)
-        for e in list(changes):
-            crit_s.add(e - k)
-        crit_list = sorted(crit_s)
+            base = prefix_s[idx + 1]
+            rem = x - pos_list[idx]
+            return base + density_after[idx] * rem
         ans = 0
-        for i in range(m):
-            ans = max(ans, C[i] * min(k, LEN[i]))
-        n_crit = len(crit_list)
-        for t in range(n_crit - 1):
-            left_s = crit_list[t]
-            right_s = crit_list[t + 1] - 1
-            if left_s > right_s:
-                continue
-            s0 = left_s
-            delta = get_coin(s0 + k) - get_coin(s0)
-            if delta > 0:
-                s_eval = right_s
-            elif delta < 0:
-                s_eval = left_s
-            else:
-                s_eval = left_s
-            curr = get_prefix(s_eval + k - 1) - get_prefix(s_eval - 1)
-            ans = max(ans, curr)
+        for p in pos_list:
+            j = p - 1
+            curr = get_S(j) - get_S(j - k)
+            if curr > ans:
+                ans = curr
+            j = p + k - 1
+            curr = get_S(j) - get_S(j - k)
+            if curr > ans:
+                ans = curr
         return ans
 
 # @lc code=end
