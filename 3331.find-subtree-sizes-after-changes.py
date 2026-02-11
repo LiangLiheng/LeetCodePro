@@ -5,38 +5,61 @@
 #
 
 # @lc code=start
+from typing import List
 class Solution:
     def findSubtreeSizes(self, parent: List[int], s: str) -> List[int]:
-        import sys
-        sys.setrecursionlimit(100010)
         n = len(parent)
-        orig_adj = [[] for _ in range(n)]
+        # Step 1: Prepare the tree
+        tree = [[] for _ in range(n)]
         for i in range(1, n):
-            orig_adj[parent[i]].append(i)
+            tree[parent[i]].append(i)
+
+        # Step 2: Find new parent for each node
         new_parent = parent[:]
-        char_to_node = {}
-        def update_parent(node):
-            if node != 0 and s[node] in char_to_node:
-                new_parent[node] = char_to_node[s[node]]
-            prev = char_to_node.get(s[node], None)
-            char_to_node[s[node]] = node
-            for child in orig_adj[node]:
-                update_parent(child)
-            if prev is None:
-                del char_to_node[s[node]]
-            else:
-                char_to_node[s[node]] = prev
-        update_parent(0)
-        new_adj = [[] for _ in range(n)]
+        # For each character, store stack of (node) in current DFS path
+        from collections import defaultdict
+        char_stack = defaultdict(list)
+        def dfs(u):
+            char = s[u]
+            char_stack[char].append(u)
+            for v in tree[u]:
+                # Find closest ancestor with same char
+                if len(char_stack[char]) > 1:
+                    new_parent[v] = char_stack[char][-2]
+                else:
+                    new_parent[v] = parent[v]
+                dfs(v)
+            char_stack[char].pop()
+        dfs(0)
+
+        # Step 3: Validate new tree structure
+        root_count = sum(1 for p in new_parent if p == -1)
+        assert root_count == 1, 'Invalid tree: should have exactly one root.'
+        # Build visited set to check connectivity
+        visited = set()
+        def check(u):
+            visited.add(u)
+            for v in range(n):
+                if new_parent[v] == u:
+                    if v in visited:
+                        raise Exception('Cycle detected')
+                    check(v)
+        check(new_parent.index(-1))
+        assert len(visited) == n, 'Tree not connected after parent change.'
+
+        # Step 4: Build new tree
+        new_tree = [[] for _ in range(n)]
         for i in range(1, n):
-            new_adj[new_parent[i]].append(i)
-        ans = [0] * n
-        def compute_size(node):
-            sz = 1
-            for child in new_adj[node]:
-                sz += compute_size(child)
-            ans[node] = sz
-            return sz
-        compute_size(0)
-        return ans
+            new_tree[new_parent[i]].append(i)
+
+        # Step 5: Compute subtree sizes
+        sizes = [0] * n
+        def compute(u):
+            size = 1
+            for v in new_tree[u]:
+                size += compute(v)
+            sizes[u] = size
+            return size
+        compute(0)
+        return sizes
 # @lc code=end
