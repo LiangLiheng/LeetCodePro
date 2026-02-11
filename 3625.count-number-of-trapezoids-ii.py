@@ -6,67 +6,45 @@
 
 # @lc code=start
 from typing import List
-from math import gcd
-from collections import defaultdict
+from itertools import combinations
 
 class Solution:
     def countTrapezoids(self, points: List[List[int]]) -> int:
+        def cross(o, a, b):
+            return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+        def is_convex_cycle(quad):
+            # Only check cyclic orderings (ABCD and DCBA)
+            for order in [quad, quad[::-1]]:
+                c1 = cross(order[0], order[1], order[2])
+                c2 = cross(order[1], order[2], order[3])
+                c3 = cross(order[2], order[3], order[0])
+                c4 = cross(order[3], order[0], order[1])
+                if (c1 > 0 and c2 > 0 and c3 > 0 and c4 > 0) or (c1 < 0 and c2 < 0 and c3 < 0 and c4 < 0):
+                    return True, order
+            return False, None
+
+        def is_parallel(p1, p2, p3, p4):
+            dx1, dy1 = p2[0] - p1[0], p2[1] - p1[1]
+            dx2, dy2 = p4[0] - p3[0], p4[1] - p3[1]
+            return dx1 * dy2 == dx2 * dy1
+
         n = len(points)
-        slope_to_lines = defaultdict(lambda: defaultdict(set))
-        for i in range(n):
-            for j in range(i + 1, n):
-                xi, yi = points[i]
-                xj, yj = points[j]
-                dx = xj - xi
-                dy = yj - yi
-                g = gcd(abs(dx), abs(dy))
-                if g != 0:
-                    dx //= g
-                    dy //= g
-                if dx < 0 or (dx == 0 and dy < 0):
-                    dx = -dx
-                    dy = -dy
-                slope = (dx, dy)
-                c = xi * dy - yi * dx
-                slope_to_lines[slope][c].add(i)
-                slope_to_lines[slope][c].add(j)
-        total = 0
-        p_degen = 0
-        for slope, lines in slope_to_lines.items():
-            es = []
-            for cset in lines.values():
-                m = len(cset)
-                if m >= 2:
-                    e = m * (m - 1) // 2
-                    es.append(e)
-                if m >= 4:
-                    pt_list = list(cset)
-                    mm = len(pt_list)
-                    local_counter = defaultdict(int)
-                    for aa in range(mm):
-                        for bb in range(aa + 1, mm):
-                            ii = pt_list[aa]
-                            jj = pt_list[bb]
-                            sx = points[ii][0] + points[jj][0]
-                            sy = points[ii][1] + points[jj][1]
-                            local_counter[(sx, sy)] += 1
-                    for cnt in local_counter.values():
-                        p_degen += cnt * (cnt - 1) // 2
-            if len(es) >= 2:
-                sum_e = sum(es)
-                sum_sq = sum(e * e for e in es)
-                cross = (sum_e * sum_e - sum_sq) // 2
-                total += cross
-        # Parallelograms via midpoints
-        mid_counter = defaultdict(int)
-        for i in range(n):
-            for j in range(i + 1, n):
-                sx = points[i][0] + points[j][0]
-                sy = points[i][1] + points[j][1]
-                mid_counter[(sx, sy)] += 1
-        p_count = 0
-        for cnt in mid_counter.values():
-            p_count += cnt * (cnt - 1) // 2
-        P = p_count - p_degen
-        return total - P
+        seen = set()
+        for quad in combinations(points, 4):
+            convex, quad_order = is_convex_cycle(quad)
+            if not convex:
+                continue
+            A, B, C, D = quad_order
+            found = False
+            # Only consider non-adjacent sides: (AB, CD) and (BC, DA)
+            if is_parallel(A, B, C, D):
+                found = True
+            if is_parallel(B, C, D, A):
+                found = True
+            if found:
+                # Store as frozenset for robust deduplication
+                seen.add(frozenset(quad))
+        # Optional: review the selection process to confirm only valid cases are included
+        return len(seen)
 # @lc code=end
