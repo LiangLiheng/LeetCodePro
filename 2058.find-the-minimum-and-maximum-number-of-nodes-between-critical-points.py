@@ -12,28 +12,29 @@
 #         self.next = next
 class Solution:
     def nodesBetweenCriticalPoints(self, head: Optional[ListNode]) -> List[int]:
-        if not head or not head.next:
-            return [-1, -1]
-        min_dist = float('inf')
-        prev_crit = -1
-        first_crit = -1
-        pos = 2
-        prev_node = head
+        prev = head
         curr = head.next
-        while curr.next:
+        pos = 2
+        first = -1
+        prev_crit = -1
+        min_d = float('inf')
+        last = -1
+        while curr and curr.next:
             nxt = curr.next
-            if (curr.val > prev_node.val and curr.val > nxt.val) or \
-               (curr.val < prev_node.val and curr.val < nxt.val):
-                if first_crit == -1:
-                    first_crit = pos
-                if prev_crit != -1:
-                    min_dist = min(min_dist, pos - prev_crit)
-                prev_crit = pos
-            prev_node = curr
+            if (curr.val > prev.val and curr.val > nxt.val) or (curr.val < prev.val and curr.val < nxt.val):
+                if first == -1:
+                    first = pos
+                    prev_crit = pos
+                    last = pos
+                else:
+                    min_d = min(min_d, pos - prev_crit)
+                    prev_crit = pos
+                    last = pos
+            prev = curr
             curr = nxt
             pos += 1
-        if prev_crit == -1 or first_crit == prev_crit:
+        if first == -1 or first == last:
             return [-1, -1]
-        return [min_dist, prev_crit - first_crit]
+        return [min_d, last - first]
 
 # @lc code=end
