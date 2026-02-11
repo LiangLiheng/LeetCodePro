@@ -6,35 +6,42 @@
 
 # @lc code=start
 from typing import List
+from functools import lru_cache
+
 class Solution:
     def minTravelTime(self, l: int, n: int, k: int, position: List[int], time: List[int]) -> int:
-        INF = 10**18
-        prefix = [0] * (n + 1)
-        for i in range(n):
-            prefix[i + 1] = prefix[i] + time[i]
-        dp = [[[INF] * 101 for _ in range(k + 1)] for _ in range(n)]
-        dp[0][0][time[0]] = 0
-        for i in range(n):
-            for j in range(k + 1):
-                for t in range(101):
-                    if dp[i][j][t] == INF:
-                        continue
-                    for nxt in range(i + 1, n):
-                        merges_add = nxt - i - 1
-                        new_j = j + merges_add
-                        if new_j > k:
-                            break
-                        dist = position[nxt] - position[i]
-                        cost_add = dist * t
-                        sum_int = prefix[nxt] - prefix[i + 1]
-                        new_t = time[nxt] + sum_int
-                        if new_t > 100:
-                            continue
-                        new_cost = dp[i][j][t] + cost_add
-                        if new_cost < dp[nxt][new_j][new_t]:
-                            dp[nxt][new_j][new_t] = new_cost
-        ans = INF
-        for t in range(101):
-            ans = min(ans, dp[n-1][k][t])
-        return ans
+        positions = position[:]
+        times = time[:]
+
+        @lru_cache(maxsize=None)
+        def dp(pos_tuple, time_tuple, merges_left):
+            pos = list(pos_tuple)
+            t = list(time_tuple)
+            length = len(pos)
+            if merges_left == 0:
+                # Compute total time
+                total = 0
+                for i in range(length - 1):
+                    dist = pos[i+1] - pos[i]
+                    total += dist * t[i]
+                return total
+            min_time = float('inf')
+            # Try all possible merges (not at the first or last sign)
+            for i in range(1, length - 1):
+                # Merge sign at i with i+1, remove i
+                new_pos = pos[:i] + pos[i+1:]
+                new_t = t[:i-1] + [t[i-1] + t[i]] + t[i+1:]
+                # General validation: check for correct lengths and index validity
+                if len(new_pos) != length - 1 or len(new_t) != length - 1:
+                    continue
+                cand = dp(tuple(new_pos), tuple(new_t), merges_left - 1)
+                if cand < min_time:
+                    min_time = cand
+            return min_time
+
+        result = dp(tuple(positions), tuple(times), k)
+        # Final verification: ensure result is an integer and non-negative
+        assert isinstance(result, int) or isinstance(result, float)
+        assert result >= 0
+        return result
 # @lc code=end
