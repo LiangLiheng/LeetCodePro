@@ -5,46 +5,44 @@
 #
 
 # @lc code=start
+from typing import List
+from collections import deque
+
 class Solution:
     def maxTargetNodes(self, edges1: List[List[int]], edges2: List[List[int]]) -> List[int]:
-        from collections import deque
-
-        def build_adj(edges, size):
-            adj = [[] for _ in range(size)]
-            for a, b in edges:
-                adj[a].append(b)
-                adj[b].append(a)
-            return adj
-
-        def compute_sizes(adj):
-            n = len(adj)
-            color = [-1] * n
-            sz = [0, 0]
-            q = deque([0])
-            color[0] = 0
-            sz[0] += 1
-            while q:
-                u = q.popleft()
-                for v in adj[u]:
-                    if color[v] == -1:
-                        color[v] = 1 - color[u]
-                        sz[color[v]] += 1
-                        q.append(v)
-            return color, sz[0], sz[1]
-
         n = len(edges1) + 1
         m = len(edges2) + 1
-        adj1 = build_adj(edges1, n)
-        color1, size0_1, size1_1 = compute_sizes(adj1)
-        adj2 = build_adj(edges2, m)
-        _, size0_2, size1_2 = compute_sizes(adj2)
-        extra = max(size0_2, size1_2)
-        ans = [0] * n
-        for i in range(n):
-            if color1[i] == 0:
-                ans[i] = size0_1 + extra
-            else:
-                ans[i] = size1_1 + extra
-        return ans
+        adj1 = [[] for _ in range(n)]
+        for a, b in edges1:
+            adj1[a].append(b)
+            adj1[b].append(a)
+        adj2 = [[] for _ in range(m)]
+        for a, b in edges2:
+            adj2[a].append(b)
+            adj2[b].append(a)
 
+        def compute(adj, N):
+            parity = [-1] * N
+            q = deque()
+            root = 0
+            parity[root] = 0
+            q.append(root)
+            sizes = [0, 0]
+            while q:
+                u = q.popleft()
+                sizes[parity[u]] += 1
+                for v in adj[u]:
+                    if parity[v] == -1:
+                        parity[v] = 1 - parity[u]
+                        q.append(v)
+            return parity, sizes
+
+        parity1, sizes1 = compute(adj1, n)
+        _, sizes2 = compute(adj2, m)
+        max_t2 = max(sizes2)
+        answer = [0] * n
+        for i in range(n):
+            p = parity1[i]
+            answer[i] = sizes1[p] + max_t2
+        return answer
 # @lc code=end
