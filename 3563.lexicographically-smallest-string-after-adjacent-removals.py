@@ -7,30 +7,22 @@
 # @lc code=start
 class Solution:
     def lexicographicallySmallestString(self, s: str) -> str:
-        n = len(s)
-        can_full = [[False] * (n + 1) for _ in range(n + 1)]
-        for i in range(n + 1):
-            can_full[i][i] = True
+        def are_consecutive(a, b):
+            diff = abs(ord(a) - ord(b))
+            return diff == 1 or diff == 25
         
-        def is_removable(a: str, b: str) -> bool:
-            oa, ob = ord(a), ord(b)
-            return abs(oa - ob) == 1 or {a, b} == {'a', 'z'}
-        
-        for leng in range(2, n + 1, 2):
-            for i in range(n - leng + 1):
-                j = i + leng
-                for k in range(i + 1, j):
-                    if is_removable(s[i], s[k]) and can_full[i + 1][k] and can_full[k + 1][j]:
-                        can_full[i][j] = True
-                        break
-        
-        min_str = [""] * (n + 1)
-        for i in range(n - 1, -1, -1):
-            candidates = [s[i] + min_str[i + 1]]
-            for j in range(i + 1, n):
-                if is_removable(s[i], s[j]) and can_full[i + 1][j]:
-                    candidates.append(min_str[j + 1])
-            min_str[i] = min(candidates)
-        return min_str[0]
-
+        prev = None
+        curr = s
+        while prev != curr:
+            prev = curr
+            stack = []
+            i = 0
+            while i < len(curr):
+                if stack and are_consecutive(stack[-1], curr[i]):
+                    stack.pop()
+                else:
+                    stack.append(curr[i])
+                i += 1
+            curr = ''.join(stack)
+        return curr
 # @lc code=end
