@@ -5,39 +5,38 @@
 #
 
 # @lc code=start
-from typing import List
 from collections import deque
+from typing import List
 
 class Solution:
     def minMaxWeight(self, n: int, edges: List[List[int]], threshold: int) -> int:
-        if not edges:
-            return -1
-        weights = sorted(set(w for _, _, w in edges))
-        def check(M: int) -> bool:
-            incoming = [[] for _ in range(n)]
+        ws = sorted(set(e[2] for e in edges))
+        def check(mx: int) -> bool:
+            adj = [[] for _ in range(n)]
             for a, b, w in edges:
-                if w <= M:
-                    incoming[b].append(a)
-            visited = [False] * n
-            visited[0] = True
+                if w <= mx:
+                    adj[b].append(a)
+            vis = [False] * n
             q = deque([0])
-            count = 1
+            vis[0] = True
+            cnt = 1
             while q:
-                cur = q.popleft()
-                for prev in incoming[cur]:
-                    if not visited[prev]:
-                        visited[prev] = True
-                        count += 1
-                        q.append(prev)
-            return count == n
-        left, right = 0, len(weights) - 1
+                u = q.popleft()
+                for v in adj[u]:
+                    if not vis[v]:
+                        vis[v] = True
+                        cnt += 1
+                        q.append(v)
+            return cnt == n
+        l, r = 0, len(ws) - 1
         ans = -1
-        while left <= right:
-            mid = left + (right - left) // 2
-            if check(weights[mid]):
-                ans = weights[mid]
-                right = mid - 1
+        while l <= r:
+            m = (l + r) // 2
+            if check(ws[m]):
+                ans = ws[m]
+                r = m - 1
             else:
-                left = mid + 1
+                l = m + 1
         return ans
+
 # @lc code=end
