@@ -7,27 +7,31 @@
 # @lc code=start
 class Solution:
     def completePrime(self, num: int) -> bool:
+        def is_prime(n):
+            if n < 2:
+                return False
+            if n == 2:
+                return True
+            if n % 2 == 0:
+                return False
+            i = 3
+            while i * i <= n:
+                if n % i == 0:
+                    return False
+                i += 2
+            return True
+
         s = str(num)
         n = len(s)
-        
-        def is_prime(x: int) -> bool:
-            if x <= 1:
-                return False
-            if x == 2 or x == 3:
-                return True
-            if x % 2 == 0 or x % 3 == 0:
-                return False
-            i = 5
-            while i * i <= x:
-                if x % i == 0 or x % (i + 2) == 0:
-                    return False
-                i += 6
-            return True
-        
-        for i in range(1, n + 1):
+        # Check all prefixes
+        for i in range(1, n+1):
             prefix = int(s[:i])
-            suffix = int(s[n - i:])
-            if not is_prime(prefix) or not is_prime(suffix):
+            if not is_prime(prefix):
+                return False
+        # Check all suffixes
+        for i in range(n):
+            suffix = int(s[i:])
+            if not is_prime(suffix):
                 return False
         return True
 # @lc code=end
