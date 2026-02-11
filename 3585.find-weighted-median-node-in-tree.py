@@ -5,88 +5,93 @@
 #
 
 # @lc code=start
-from typing import List
-from collections import deque
-
 class Solution:
     def findMedian(self, n: int, edges: List[List[int]], queries: List[List[int]]) -> List[int]:
-        adj = [[] for _ in range(n)]
-        for a, b, w in edges:
-            adj[a].append((b, w))
-            adj[b].append((a, w))
+        from collections import defaultdict
+        import math
         
-        LOG = 18
-        par = [[-1] * n for _ in range(LOG)]
-        dep = [0] * n
-        level = [0] * n
+        # Build adjacency list with weights
+        tree = defaultdict(list)
+        for u, v, w in edges:
+            tree[u].append((v, w))
+            tree[v].append((u, w))
         
-        q = deque([0])
-        vis = [False] * n
-        vis[0] = True
-        par[0][0] = -1
-        while q:
-            u = q.popleft()
-            for v, w in adj[u]:
-                if not vis[v]:
-                    vis[v] = True
-                    par[0][v] = u
-                    dep[v] = dep[u] + w
-                    level[v] = level[u] + 1
-                    q.append(v)
-        
+        LOG = math.ceil(math.log2(n)) + 1
+        parent = [[-1]*n for _ in range(LOG)]
+        depth = [0]*n
+        up_weight = [0]*n  # distance from root
+        parent_edge = [0]*n  # edge weight from parent
+
+        def dfs(u, p):
+            for v, w in tree[u]:
+                if v != p:
+                    parent[0][v] = u
+                    depth[v] = depth[u]+1
+                    up_weight[v] = up_weight[u]+w
+                    parent_edge[v] = w
+                    dfs(v,u)
+        dfs(0,-1)
+
         for k in range(1, LOG):
-            for i in range(n):
-                if par[k - 1][i] != -1:
-                    par[k][i] = par[k - 1][par[k - 1][i]]
+            for v in range(n):
+                if parent[k-1][v] != -1:
+                    parent[k][v] = parent[k-1][parent[k-1][v]]
         
-        def get_lca(u: int, v: int) -> int:
-            if level[u] > level[v]:
+        def lca(u, v):
+            if depth[u] < depth[v]:
                 u, v = v, u
-            diff = level[v] - level[u]
-            for k in range(LOG):
-                if (diff >> k) & 1:
-                    v = par[k][v]
+            for k in range(LOG-1, -1, -1):
+                if parent[k][u] != -1 and depth[parent[k][u]] >= depth[v]:
+                    u = parent[k][u]
             if u == v:
                 return u
-            for k in range(LOG - 1, -1, -1):
-                if par[k][u] != par[k][v]:
-                    u = par[k][u]
-                    v = par[k][v]
-            return par[0][u]
-        
-        def find_up(u: int, thresh: int) -> int:
-            if dep[u] <= thresh:
-                return u
-            cur = u
-            for k in range(LOG - 1, -1, -1):
-                anc = par[k][cur]
-                if anc != -1 and dep[anc] > thresh:
-                    cur = anc
-            next_node = par[0][cur]
-            return next_node if next_node != -1 else cur
-        
-        def find_down(v: int, thresh: int) -> int:
-            cur = v
-            for k in range(LOG - 1, -1, -1):
-                anc = par[k][cur]
-                if anc != -1 and dep[anc] >= thresh:
-                    cur = anc
-            return cur
-        
-        ans = []
-        for qu, qv in queries:
-            l = get_lca(qu, qv)
-            ascent = dep[qu] - dep[l]
-            total_w = ascent + dep[qv] - dep[l]
-            target = (total_w + 1) // 2
-            if ascent >= target:
-                th_up = dep[qu] - target
-                med = find_up(qu, th_up)
-            else:
-                prefix_lca = ascent
-                th_down = dep[l] + target - prefix_lca
-                med = find_down(qv, th_down)
-            ans.append(med)
-        return ans
+            for k in range(LOG-1, -1, -1):
+                if parent[k][u] != -1 and parent[k][u] != parent[k][v]:
+                    u = parent[k][u]
+                    v = parent[k][v]
+            return parent[0][u]
 
+        ans = []
+        for u, v in queries:
+            x = lca(u,v)
+            total = up_weight[u] + up_weight[v] - 2*up_weight[x]
+            half = total/2
+            # Reconstruct the path from u to v via LCA, as a list of nodes
+            path = []
+            node = u
+            up_nodes = []
+            while node != x:
+                up_nodes.append(node)
+                node = parent[0][node]
+            up_nodes.append(x)
+            down_nodes = []
+            node = v
+            tmp = []
+            while node != x:
+                tmp.append(node)
+                node = parent[0][node]
+            down_nodes = tmp[::-1]
+            full_path = up_nodes + down_nodes
+            # Traverse the path, summing edge weights
+            curr_sum = 0
+            for idx in range(len(full_path)):
+                if idx == 0:
+                    if curr_sum >= half:
+                        ans.append(full_path[idx])
+                        break
+                else:
+                    # Edge from full_path[idx-1] to full_path[idx]
+                    prev = full_path[idx-1]
+                    curr = full_path[idx]
+                    # Find the edge weight
+                    # Since it's a tree, parent[0][curr] == prev or parent[0][prev] == curr
+                    if parent[0][curr] == prev:
+                        w = parent_edge[curr]
+                    else:
+                        w = parent_edge[prev]
+                    curr_sum += w
+                    if curr_sum >= half:
+                        ans.append(curr)
+                        break
+        return ans
 # @lc code=end
