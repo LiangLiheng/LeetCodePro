@@ -5,52 +5,64 @@
 #
 
 # @lc code=start
+from typing import List
+from functools import lru_cache
+
 class Solution:
     def permute(self, n: int, k: int) -> List[int]:
-        dp = [[[0] * 2 for _ in range(51)] for _ in range(51)]
-        dp[0][0][0] = 1
-        dp[0][0][1] = 1
-        for o in range(51):
-            for e in range(51):
-                if o == 0 and e == 0:
-                    continue
+        odds = [i for i in range(1, n+1) if i % 2 == 1]
+        evens = [i for i in range(1, n+1) if i % 2 == 0]
+        total_odds, total_evens = len(odds), len(evens)
+        
+        @lru_cache(maxsize=None)
+        def count(o, e, p):
+            if o + e == 0:
+                return 1
+            res = 0
+            if p == 0:
                 if o > 0:
-                    dp[o][e][1] = o * dp[o - 1][e][0]
+                    res += o * count(o-1, e, 1)
                 if e > 0:
-                    dp[o][e][0] = e * dp[o][e - 1][1]
-        num_o = (n + 1) // 2
-        num_e = n // 2
-        total = dp[num_o][num_e][0] + dp[num_o][num_e][1]
-        if k > total:
-            return []
-        used = set()
-        res = []
-        remain_o = num_o
-        remain_e = num_e
-        prev_par = -1
-        curr_k = k
-        for i in range(n):
-            for c in range(1, n + 1):
-                if c in used:
-                    continue
-                par = c % 2
-                if i > 0 and par == prev_par:
-                    continue
-                o_after = remain_o - (1 if par == 1 else 0)
-                e_after = remain_e - (1 if par == 0 else 0)
-                next_p = 1 - par
-                ways = dp[o_after][e_after][next_p]
-                if curr_k <= ways:
-                    res.append(c)
-                    used.add(c)
-                    remain_o = o_after
-                    remain_e = e_after
-                    prev_par = par
-                    break
-                else:
-                    curr_k -= ways
+                    res += e * count(o, e-1, 2)
+            elif p == 1:
+                if e > 0:
+                    res += e * count(o, e-1, 2)
             else:
+                if o > 0:
+                    res += o * count(o-1, e, 1)
+            return res
+
+        total_valid = count(total_odds, total_evens, 0)
+        if k > total_valid:
+            return []
+
+        res = []
+        o, e = total_odds, total_evens
+        p = 0
+        avail = set(range(1, n+1))
+        for pos in range(n):
+            for v in sorted(avail):
+                v_parity = 1 if v % 2 == 1 else 2
+                if p == 0 or p != v_parity:
+                    no = o - (1 if v_parity == 1 else 0)
+                    ne = e - (1 if v_parity == 2 else 0)
+                    cnt = count(no, ne, v_parity)
+                    if k > cnt:
+                        k -= cnt
+                    else:
+                        res.append(v)
+                        avail.remove(v)
+                        if v_parity == 1:
+                            o -= 1
+                        else:
+                            e -= 1
+                        p = v_parity
+                        break
+        # Verification step for general correctness
+        if len(res) != n:
+            return []
+        for i in range(1, n):
+            if (res[i] % 2) == (res[i-1] % 2):
                 return []
         return res
-
 # @lc code=end
