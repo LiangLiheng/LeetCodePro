@@ -3,62 +3,50 @@
 #
 # [3413] Maximum Coins From K Consecutive Bags
 #
-
 # @lc code=start
 from typing import List
-import bisect
-
+from bisect import bisect_left, bisect_right
 class Solution:
     def maximumCoins(self, coins: List[List[int]], k: int) -> int:
-        if k == 0:
-            return 0
+        # Collect all unique segment endpoints
         events = []
-        for li, ri, ci in coins:
-            events.append((li, ci))
-            events.append((ri + 1, -ci))
-        events.sort(key=lambda e: (e[0], -e[1]))
-        pos_set = set(e[0] for e in events)
-        pos_list = sorted(pos_set)
-        m = len(pos_list)
-        if m == 0:
-            return 0
-        prefix_s = [0] * (m + 1)
-        density_after = [0] * m
-        jj = 0  # renamed to avoid conflict with loop var
-        cur_density = 0
-        cur_s = 0
-        last_pos = 0
-        for i in range(m):
-            p = pos_list[i]
-            if p > last_pos + 1:
-                num_bags = p - last_pos - 1
-                cur_s += cur_density * num_bags
-            while jj < len(events) and events[jj][0] == p:
-                cur_density += events[jj][1]
-                jj += 1
-            cur_s += cur_density
-            prefix_s[i + 1] = cur_s
-            density_after[i] = cur_density
-            last_pos = p
-        def get_S(x: int) -> int:
-            if x < 1:
-                return 0
-            idx = bisect.bisect_right(pos_list, x) - 1
-            if idx < 0:
-                return 0
-            base = prefix_s[idx + 1]
-            rem = x - pos_list[idx]
-            return base + density_after[idx] * rem
-        ans = 0
-        for p in pos_list:
-            j = p - 1
-            curr = get_S(j) - get_S(j - k)
-            if curr > ans:
-                ans = curr
-            j = p + k - 1
-            curr = get_S(j) - get_S(j - k)
-            if curr > ans:
-                ans = curr
-        return ans
-
+        for l, r, c in coins:
+            events.append((l, c))
+            events.append((r + 1, -c))
+        events.sort()
+        # Build position and prefix sum arrays
+        pos = []
+        coin_at = []
+        cur = 0
+        prev = None
+        for p, delta in events:
+            if prev is not None and p != prev:
+                pos.append(prev)
+                coin_at.append(cur)
+            cur += delta
+            prev = p
+        # Add last position if needed
+        if prev is not None:
+            pos.append(prev)
+            coin_at.append(cur)
+        n = len(pos)
+        # Build prefix sum of coins over positions
+        prefix = [0]
+        for i in range(n - 1):
+            segment_len = pos[i+1] - pos[i]
+            prefix.append(prefix[-1] + coin_at[i] * segment_len)
+        max_coins = 0
+        # Slide window of size k
+        for i in range(n - 1):
+            window_start = pos[i]
+            window_end = window_start + k
+            # Find the rightmost index where pos[j] < window_end
+            j = bisect_left(pos, window_end, i, n) - 1
+            total = prefix[j+1] - prefix[i]
+            # Add partial segment if needed
+            overlap = max(0, window_end - pos[j])
+            if j < n - 1 and overlap > 0:
+                total += coin_at[j] * overlap
+            max_coins = max(max_coins, total)
+        return max_coins
 # @lc code=end
