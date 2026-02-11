@@ -5,54 +5,45 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def lenOfVDiagonal(self, grid: List[List[int]]) -> int:
-        if not grid or not grid[0]:
+        from functools import lru_cache
+        n = len(grid)
+        if n == 0:
             return 0
-        n, m = len(grid), len(grid[0])
-        dirs = [(1,1), (1, -1), (-1, -1), (-1, 1)]
-        # dp[d][r][c][0]: max steps expecting 0 next; [1]: expecting 2 next
-        dp = [[[[0] * 2 for _ in range(m)] for _ in range(n)] for _ in range(4)]
-        for d in range(4):
+        m = len(grid[0])
+        dirs = [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+        @lru_cache(None)
+        def dfs(r, c, d, turned, par):
+            res = 0
+            # continue straight
             dr, dc = dirs[d]
-            r_range = range(n-1, -1, -1) if dr == 1 else range(n)
-            for r in r_range:
-                for c in range(m):
-                    for e_idx, exp in enumerate([0, 2]):
-                        nr = r + dr
-                        nc = c + dc
-                        if 0 <= nr < n and 0 <= nc < m and grid[nr][nc] == exp:
-                            next_exp = 2 - exp
-                            next_e_idx = 1 if next_exp == 2 else 0
-                            dp[d][r][c][e_idx] = 1 + dp[d][nr][nc][next_e_idx]
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < n and 0 <= nc < m:
+                npar = 1 - par
+                exp = 2 if npar == 1 else 0
+                if grid[nr][nc] == exp:
+                    res = max(res, 1 + dfs(nr, nc, d, turned, npar))
+            # turn clockwise if not turned
+            if turned == 0:
+                nd = (d + 1) % 4
+                dr, dc = dirs[nd]
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < n and 0 <= nc < m:
+                    npar = 1 - par
+                    exp = 2 if npar == 1 else 0
+                    if grid[nr][nc] == exp:
+                        res = max(res, 1 + dfs(nr, nc, nd, 1, npar))
+            return res
         ans = 0
         for i in range(n):
             for j in range(m):
-                if grid[i][j] != 1:
-                    continue
-                for dd in range(4):
-                    # straight
-                    steps_straight = dp[dd][i][j][1]  # exp=2
-                    ans = max(ans, 1 + steps_straight)
-                    # V turns
-                    cr, cc = i, j
-                    cur_steps = 0
-                    cur_exp = 2
-                    while True:
-                        nr = cr + dirs[dd][0]
-                        nc = cc + dirs[dd][1]
-                        if nr < 0 or nr >= n or nc < 0 or nc >= m or grid[nr][nc] != cur_exp:
-                            break
-                        cr, cc = nr, nc
-                        cur_steps += 1
-                        new_d = (dd + 1) % 4
-                        next_exp = 2 - cur_exp
-                        b_e_idx = 1 if next_exp == 2 else 0
-                        b = dp[new_d][cr][cc][b_e_idx]
-                        ans = max(ans, 1 + cur_steps + b)
-                        cur_exp = 2 - cur_exp
+                if grid[i][j] == 1:
+                    ans = max(ans, 1)
+                    for d in range(4):
+                        dr, dc = dirs[d]
+                        ni, nj = i + dr, j + dc
+                        if 0 <= ni < n and 0 <= nj < m and grid[ni][nj] == 2:
+                            ans = max(ans, 2 + dfs(ni, nj, d, 0, 1))
         return ans
-
 # @lc code=end
