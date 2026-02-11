@@ -5,39 +5,40 @@
 #
 
 # @lc code=start
+from typing import List
 class Solution:
     def countEffective(self, nums: List[int]) -> int:
         MOD = 10**9 + 7
+        n = len(nums)
         full_or = 0
         for num in nums:
             full_or |= num
-        bit_list = [b for b in range(32) if full_or & (1 << b)]
-        k = len(bit_list)
-        freq = [0] * (1 << k)
-        for num in nums:
-            mask = 0
-            for j in range(k):
-                if num & (1 << bit_list[j]):
-                    mask |= (1 << j)
-            freq[mask] += 1
-        dp = freq[:]
-        for j in range(k):
-            for s in range(1 << k):
-                if s & (1 << j):
-                    dp[s] += dp[s ^ (1 << j)]
-        ALL = (1 << k) - 1
-        popc = [0] * (1 << k)
-        for d in range(1 << k):
-            popc[d] = popc[d >> 1] + (d & 1)
+        # For each bit in full_or, find indices covering that bit
+        bit2indices = {}
+        for i in range(20):
+            if (full_or >> i) & 1:
+                bit2indices[i] = []
+        for idx, num in enumerate(nums):
+            for b in bit2indices:
+                if (num >> b) & 1:
+                    bit2indices[b].append(idx)
+        # We want to count subsets that contain at least one index from each bit's covering set (all bits in full_or)
+        # Inclusion-Exclusion Principle over bits
+        from functools import reduce
         ans = 0
-        for d in range(1, 1 << k):
-            comp = ALL ^ d
-            num_free = dp[comp]
-            p = pow(2, num_free, MOD)
-            pop = popc[d]
-            if pop % 2 == 1:
-                ans = (ans + p) % MOD
+        bits = list(bit2indices.keys())
+        m = len(bits)
+        # For each non-empty subset of bits
+        for mask in range(1, 1 << m):
+            covered = set()
+            for j in range(m):
+                if (mask >> j) & 1:
+                    covered |= set(bit2indices[bits[j]])
+            cnt = pow(2, len(covered), MOD) - 1 # non-empty subsets of covered indices
+            # Inclusion-Exclusion: add if subset has odd number of bits, subtract if even
+            if bin(mask).count('1') % 2 == 1:
+                ans = (ans + cnt) % MOD
             else:
-                ans = (ans - p + MOD) % MOD
+                ans = (ans - cnt) % MOD
         return ans
 # @lc code=end
