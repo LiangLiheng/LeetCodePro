@@ -5,51 +5,25 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def maximizeXorAndXor(self, nums: List[int]) -> int:
-        def insert(basis, val):
-            for j in range(31, -1, -1):
-                if (val & (1 << j)) == 0:
-                    continue
-                if basis[j]:
-                    val ^= basis[j]
-                else:
-                    basis[j] = val
-                    return
-        def greedy(basis, mask):
-            res = 0
-            for j in range(31, -1, -1):
-                if (mask & (1 << j)) and basis[j] and (res & (1 << j)) == 0:
-                    res ^= basis[j]
-            return res & mask
         n = len(nums)
-        ans = 0
-        ALL = (1 << 32) - 1
-        for bmask in range(1 << n):
-            and_b = ALL
-            empty_b = True
-            for i in range(n):
-                if bmask & (1 << i):
-                    if empty_b:
-                        and_b = nums[i]
-                        empty_b = False
-                    else:
-                        and_b &= nums[i]
-            if empty_b:
-                and_b = 0
-            tx = 0
-            basis = [0] * 32
-            for i in range(n):
-                if (bmask & (1 << i)) == 0:
-                    tx ^= nums[i]
-                    insert(basis, nums[i])
-            m = (~tx) & ALL
-            max_and = greedy(basis, m)
-            val = tx + 2 * max_and + and_b
-            if val > ans:
-                ans = val
-        return ans
-
+        from functools import lru_cache
+        
+        @lru_cache(maxsize=None)
+        def dfs(i, xa, ab, xc, has_b):
+            if i == n:
+                and_b = ab if has_b else 0
+                return xa + and_b + xc
+            # Option 1: assign nums[i] to A
+            res1 = dfs(i+1, xa^nums[i], ab, xc, has_b)
+            # Option 2: assign nums[i] to B
+            if has_b:
+                res2 = dfs(i+1, xa, ab & nums[i], xc, True)
+            else:
+                res2 = dfs(i+1, xa, nums[i], xc, True)
+            # Option 3: assign nums[i] to C
+            res3 = dfs(i+1, xa, ab, xc^nums[i], has_b)
+            return max(res1, res2, res3)
+        return dfs(0, 0, 0, 0, False)
 # @lc code=end
