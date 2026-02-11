@@ -5,16 +5,19 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxWeight(self, pizzas: List[int]) -> int:
+        sp = sorted(pizzas, reverse=True)
         n = len(pizzas)
-        k = n // 4
-        num_odd = (k + 1) // 2
-        num_even = k // 2
-        pizzas.sort(reverse=True)
-        total = sum(pizzas[:num_odd])
+        days = n // 4
+        num_odd = (days + 1) // 2
+        num_even = days // 2
+        ans = sum(sp[:num_odd])
+        pos = num_odd
         for i in range(num_even):
-            total += pizzas[num_odd + 2 * i + 1]
-        return total
+            ans += sp[pos + 2 * i + 1]
+        return ans
 
 # @lc code=end
