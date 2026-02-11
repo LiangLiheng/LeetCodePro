@@ -5,17 +5,21 @@
 #
 
 # @lc code=start
+from typing import List
+
 class Solution:
     def maxFrequency(self, nums: List[int], k: int) -> int:
         total_k = nums.count(k)
-        max_freq = total_k
-        for t in range(1, 51):
-            max_ending_here = 0
-            max_so_far = 0
+        max_gain = 0
+        for v in range(1, 51):
+            if v == k:
+                continue
+            current = 0
+            maxs = float('-inf')
             for num in nums:
-                score = (num == t) - (num == k)
-                max_ending_here = max(0, max_ending_here + score)
-                max_so_far = max(max_so_far, max_ending_here)
-            max_freq = max(max_freq, total_k + max_so_far)
-        return max_freq
+                score = 1 if num == v else (-1 if num == k else 0)
+                current = max(score, current + score)
+                maxs = max(maxs, current)
+            max_gain = max(max_gain, max(0, maxs))
+        return total_k + max_gain
 # @lc code=end
