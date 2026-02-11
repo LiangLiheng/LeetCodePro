@@ -18,25 +18,20 @@
 #         self.right = right
 class Solution:
     def isSubPath(self, head: Optional[ListNode], root: Optional[TreeNode]) -> bool:
-        def matches(node: Optional[TreeNode], ln: Optional[ListNode]) -> bool:
-            if not ln:
+        def helper(tnode: Optional[TreeNode], lnode: Optional[ListNode]) -> bool:
+            if not lnode:
                 return True
-            if not node or node.val != ln.val:
+            if not tnode or tnode.val != lnode.val:
                 return False
-            return matches(node.left, ln.next) or matches(node.right, ln.next)
-        
-        if not root:
-            return False
-        
-        stack = [root]
-        while stack:
-            node = stack.pop()
-            if matches(node, head):
+            return helper(tnode.left, lnode.next) or helper(tnode.right, lnode.next)
+
+        def traverse(tnode: Optional[TreeNode]) -> bool:
+            if not tnode:
+                return False
+            if helper(tnode, head):
                 return True
-            if node.right:
-                stack.append(node.right)
-            if node.left:
-                stack.append(node.left)
-        return False
+            return traverse(tnode.left) or traverse(tnode.right)
+
+        return traverse(root)
 
 # @lc code=end
