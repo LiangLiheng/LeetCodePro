@@ -5,41 +5,55 @@
 #
 
 # @lc code=start
-from typing import List
-
 class Solution:
     def maximizeSumOfWeights(self, edges: List[List[int]], k: int) -> int:
-        import sys
-        sys.setrecursionlimit(100010)
+        # Step 1: Build adjacency list to represent the tree
+        # (node: list of (neighbor, edge_weight, edge_index))
+        from collections import defaultdict
         n = len(edges) + 1
-        adj = [[] for _ in range(n)]
-        for u, v, w in edges:
-            adj[u].append((v, w))
-            adj[v].append((u, w))
-        
-        def dfs(u, p):
-            gains = []
-            total_full = 0
-            for v, w in adj[u]:
-                if v == p:
-                    continue
-                f, r = dfs(v, u)
-                total_full += f
-                gains.append(w + r - f)
-            gains.sort(reverse=True)
-            gain_max_full = 0
-            gain_max_red = 0
-            current = 0
-            for i in range(len(gains)):
-                current += gains[i]
-                s = i + 1
-                if s <= k:
-                    gain_max_full = max(gain_max_full, current)
-                if s <= k - 1:
-                    gain_max_red = max(gain_max_red, current)
-            full = total_full + gain_max_full
-            red = total_full + gain_max_red
-            return full, red
-        
-        return dfs(0, -1)[0]
+        adj = defaultdict(list)
+        for idx, (u, v, w) in enumerate(edges):
+            adj[u].append((v, w, idx))
+            adj[v].append((u, w, idx))
+
+        # Step 2: Track degrees and edge usage
+        degrees = [len(adj[i]) for i in range(n)]
+        used = [True] * (n - 1)  # Keep track of which edges are kept
+
+        # Step 3: For nodes with degree > k, remove lowest-weight edges first
+        import heapq
+        over_deg = set(i for i in range(n) if degrees[i] > k)
+        while over_deg:
+            node = over_deg.pop()
+            # Gather all edges from this node that have not been removed
+            edge_list = []
+            for neighbor, w, idx in adj[node]:
+                if used[idx]:
+                    edge_list.append((w, neighbor, idx))
+            # If degree > k, remove (degree - k) smallest-weight edges
+            remove_cnt = degrees[node] - k
+            edge_list.sort()
+            for i in range(remove_cnt):
+                w, neighbor, idx = edge_list[i]
+                if used[idx]:
+                    used[idx] = False
+                    degrees[node] -= 1
+                    degrees[neighbor] -= 1
+                    # If neighbor's degree now exceeds k, add to over_deg
+                    if degrees[neighbor] > k:
+                        over_deg.add(neighbor)
+            # After removals, if still over degree, re-add to set
+            if degrees[node] > k:
+                over_deg.add(node)
+
+        # Step 4: Sum the weights of remaining edges
+        total = 0
+        for i, flag in enumerate(used):
+            if flag:
+                total += edges[i][2]
+        # Step 5: Final verification: all degrees <= k
+        # (optional assertion for debugging)
+        # for i in range(n):
+        #     assert sum(used[idx] for _, _, idx in adj[i]) <= k
+        return total
 # @lc code=end
