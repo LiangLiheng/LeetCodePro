@@ -3,72 +3,34 @@
 #
 # [3777] Minimum Deletions to Make Alternating Substring
 #
-
 # @lc code=start
 class Solution {
-    static class Fenwick {
-        private int[] tree;
-        public Fenwick(int n) {
-            tree = new int[n + 1];
-        }
-        public void update(int idx, int delta) {
-            while (idx < tree.length) {
-                tree[idx] += delta;
-                idx += idx & -idx;
-            }
-        }
-        public int query(int idx) {
-            int sum = 0;
-            while (idx > 0) {
-                sum += tree[idx];
-                idx -= idx & -idx;
-            }
-            return sum;
-        }
-    }
-
     public int[] minDeletions(String s, int[][] queries) {
-        int n = s.length();
-        char[] str = s.toCharArray();
-        Fenwick ft = new Fenwick(n);
-        for (int i = 0; i < n - 1; i++) {
-            ft.update(i + 1, (str[i] != str[i + 1]) ? 1 : 0);
-        }
-        int m = 0;
+        char[] chars = s.toCharArray();
+        List<Integer> answer = new ArrayList<>();
         for (int[] q : queries) {
-            if (q[0] == 2) m++;
-        }
-        int[] answer = new int[m];
-        int aidx = 0;
-        for (int[] query : queries) {
-            if (query[0] == 1) {
-                int j = query[1];
-                char old = str[j];
-                str[j] = (old == 'A' ? 'B' : 'A');
-                if (j > 0) {
-                    int pos = j;
-                    int oldDiff = (str[j - 1] != old ? 1 : 0);
-                    int newDiff = (str[j - 1] != str[j] ? 1 : 0);
-                    ft.update(pos, newDiff - oldDiff);
-                }
-                if (j < n - 1) {
-                    int pos = j + 1;
-                    int oldDiff = (old != str[j + 1] ? 1 : 0);
-                    int newDiff = (str[j] != str[j + 1] ? 1 : 0);
-                    ft.update(pos, newDiff - oldDiff);
-                }
-            } else {
-                int l = query[1];
-                int r = query[2];
+            if (q[0] == 1) {
+                // Flip the character at index j
+                int j = q[1];
+                chars[j] = chars[j] == 'A' ? 'B' : 'A';
+            } else if (q[0] == 2) {
+                // Compute minimum deletions for s[l..r]
+                int l = q[1], r = q[2];
                 int deletions = 0;
-                if (l < r) {
-                    int changes = ft.query(r) - ft.query(l);
-                    deletions = (r - l) - changes;
+                for (int i = l + 1; i <= r; ++i) {
+                    if (chars[i] == chars[i - 1]) {
+                        deletions++;
+                    }
                 }
-                answer[aidx++] = deletions;
+                answer.add(deletions);
             }
         }
-        return answer;
+        // Convert answer list to array
+        int[] res = new int[answer.size()];
+        for (int i = 0; i < answer.size(); ++i) {
+            res[i] = answer.get(i);
+        }
+        return res;
     }
 }
 # @lc code=end
