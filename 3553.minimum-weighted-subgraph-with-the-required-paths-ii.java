@@ -6,90 +6,77 @@
 
 # @lc code=start
 import java.util.*;
-import java.util.function.BiFunction;
 
 class Solution {
+    static final int LOG = 20;
+    int n;
+    List<int[]>[] tree;
+    int[][] parent;
+    int[] depth;
+    long[] prefix;
+    
     public int[] minimumWeight(int[][] edges, int[][] queries) {
-        int n = edges.length + 1;
-        @SuppressWarnings("unchecked")
-        List<int[]>[] adj = new List[n];
-        for (int i = 0; i < n; i++) {
-            adj[i] = new ArrayList<>();
+        n = edges.length + 1;
+        tree = new ArrayList[n];
+        for (int i = 0; i < n; ++i) tree[i] = new ArrayList<>();
+        for (int[] e : edges) {
+            int u = e[0], v = e[1], w = e[2];
+            tree[u].add(new int[]{v, w});
+            tree[v].add(new int[]{u, w});
         }
-        for (int[] edge : edges) {
-            int u = edge[0], v = edge[1], w = edge[2];
-            adj[u].add(new int[]{v, w});
-            adj[v].add(new int[]{u, w});
-        }
-        long[] dist = new long[n];
-        Arrays.fill(dist, -1L);
-        int[] dep = new int[n];
-        int[][] par = new int[n][18];
-        Queue<Integer> q = new LinkedList<>();
-        q.offer(0);
-        dist[0] = 0;
-        dep[0] = 0;
-        par[0][0] = -1;
-        while (!q.isEmpty()) {
-            int u = q.poll();
-            for (int[] pr : adj[u]) {
-                int v = pr[0];
-                int w = pr[1];
-                if (dist[v] == -1L) {
-                    dist[v] = dist[u] + w;
-                    dep[v] = dep[u] + 1;
-                    par[v][0] = u;
-                    q.offer(v);
-                }
+        parent = new int[n][LOG];
+        depth = new int[n];
+        prefix = new long[n];
+        dfs(0, -1, 0, 0);
+        for (int k = 1; k < LOG; ++k) {
+            for (int v = 0; v < n; ++v) {
+                if (parent[v][k-1] != -1)
+                    parent[v][k] = parent[parent[v][k-1]][k-1];
+                else
+                    parent[v][k] = -1;
             }
         }
-        for (int k = 1; k < 18; k++) {
-            for (int i = 0; i < n; i++) {
-                int p = par[i][k - 1];
-                par[i][k] = (p == -1 ? -1 : par[p][k - 1]);
-            }
-        }
-        BiFunction<Integer, Integer, Integer> getLCA = (u, v) -> {
-            int ua = u, va = v;
-            if (dep[ua] > dep[va]) {
-                int tmp = ua;
-                ua = va;
-                va = tmp;
-            }
-            int df = dep[va] - dep[ua];
-            for (int k = 0; k < 18; k++) {
-                if ((df & (1 << k)) != 0) {
-                    va = par[va][k];
-                }
-            }
-            if (ua == va) {
-                return ua;
-            }
-            for (int k = 17; k >= 0; k--) {
-                if (par[ua][k] != par[va][k] && par[ua][k] != -1 && par[va][k] != -1) {
-                    ua = par[ua][k];
-                    va = par[va][k];
-                }
-            }
-            return par[ua][0] != -1 ? par[ua][0] : ua;
-        };
-        BiFunction<Integer, Integer, Long> getDist = (u, v) -> {
-            int l = getLCA.apply(u, v);
-            return dist[u] + dist[v] - 2L * dist[l];
-        };
-        int m = queries.length;
-        int[] answer = new int[m];
-        for (int j = 0; j < m; j++) {
-            int s1 = queries[j][0];
-            int s2 = queries[j][1];
-            int des = queries[j][2];
-            long d1d = getDist.apply(s1, des);
-            long d2d = getDist.apply(s2, des);
-            long d12 = getDist.apply(s1, s2);
-            long dmd = (d1d + d2d - d12) / 2;
-            answer[j] = (int) (d1d + d2d - dmd);
+        int[] answer = new int[queries.length];
+        for (int i = 0; i < queries.length; ++i) {
+            int u = queries[i][0], v = queries[i][1], d = queries[i][2];
+            int lca_uv = lca(u, v);
+            long sum = dist(u, d) + dist(v, d) - dist(lca_uv, d);
+            answer[i] = (int)sum;
         }
         return answer;
+    }
+    
+    void dfs(int u, int p, int d, long wsum) {
+        parent[u][0] = p;
+        depth[u] = d;
+        prefix[u] = wsum;
+        for (int[] nbr : tree[u]) {
+            int v = nbr[0], w = nbr[1];
+            if (v != p) {
+                dfs(v, u, d+1, wsum + w);
+            }
+        }
+    }
+    
+    int lca(int u, int v) {
+        if (depth[u] < depth[v]) { int tmp = u; u = v; v = tmp; }
+        for (int k = LOG-1; k >= 0; --k) {
+            if (parent[u][k] != -1 && depth[parent[u][k]] >= depth[v])
+                u = parent[u][k];
+        }
+        if (u == v) return u;
+        for (int k = LOG-1; k >= 0; --k) {
+            if (parent[u][k] != -1 && parent[u][k] != parent[v][k]) {
+                u = parent[u][k];
+                v = parent[v][k];
+            }
+        }
+        return parent[u][0];
+    }
+    
+    long dist(int u, int v) {
+        int anc = lca(u, v);
+        return prefix[u] + prefix[v] - 2 * prefix[anc];
     }
 }
 # @lc code=end
