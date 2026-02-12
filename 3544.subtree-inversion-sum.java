@@ -3,60 +3,73 @@
 #
 # [3544] Subtree Inversion Sum
 #
-
 # @lc code=start
-import java.util.*;
-
 class Solution {
     public long subtreeInversionSum(int[][] edges, int[] nums, int k) {
         int n = nums.length;
-        List<Integer>[] adj = new List[n];
-        for (int i = 0; i < n; i++) {
-            adj[i] = new ArrayList<>();
-        }
+        List<Integer>[] tree = new List[n];
+        for (int i = 0; i < n; ++i) tree[i] = new ArrayList<>();
         for (int[] e : edges) {
-            int u = e[0], v = e[1];
-            adj[u].add(v);
-            adj[v].add(u);
+            tree[e[0]].add(e[1]);
+            tree[e[1]].add(e[0]);
         }
-        long[][][] dp = new long[n][k + 1][2];
-        dfs(0, -1, adj, nums, k, dp);
-        return dp[0][k][0];
+        long[][] dp = new long[n][k+2];
+        dfs(0, -1, tree, nums, k, dp);
+        long res = Long.MIN_VALUE;
+        for (int d = 0; d <= k; ++d) {
+            res = Math.max(res, dp[0][d]);
+        }
+        return res;
     }
-
-    private static void dfs(int u, int p, List<Integer>[] adj, int[] nums, int k, long[][][] dp) {
-        List<Integer> childs = new ArrayList<>();
-        for (int v : adj[u]) {
-            if (v != p) {
-                dfs(v, u, adj, nums, k, dp);
-                childs.add(v);
-            }
+    private void dfs(int node, int parent, List<Integer>[] tree, int[] nums, int k, long[][] dp) {
+        List<long[]> childDPs = new ArrayList<>();
+        for (int child : tree[node]) {
+            if (child == parent) continue;
+            dfs(child, node, tree, nums, k, dp);
+            childDPs.add(dp[child]);
         }
-        for (int d = 0; d <= k; d++) {
-            int dchild = Math.min(d + 1, k);
-            long sum_max_c = 0;
-            long sum_min_c = 0;
-            for (int c : childs) {
-                sum_max_c += dp[c][dchild][0];
-                sum_min_c += dp[c][dchild][1];
-            }
-            long opt0_max = (long) nums[u] + sum_max_c;
-            long opt0_min = (long) nums[u] + sum_min_c;
-            dp[u][d][0] = opt0_max;
-            dp[u][d][1] = opt0_min;
-            if (d == k) {
-                long sum_min_c_opt1 = 0;
-                long sum_max_c_opt1 = 0;
-                for (int c : childs) {
-                    sum_min_c_opt1 += dp[c][1][1];
-                    sum_max_c_opt1 += dp[c][1][0];
+        long[] dpNotInvert = new long[k+2];
+        Arrays.fill(dpNotInvert, 0);
+        dpNotInvert[k+1] = 0;
+        if (childDPs.isEmpty()) {
+            for (int d = 0; d <= k+1; ++d) dpNotInvert[d] = nums[node];
+        } else {
+            for (int d = 0; d <= k+1; ++d) dpNotInvert[d] = nums[node];
+            for (long[] childDP : childDPs) {
+                long[] next = new long[k+2];
+                Arrays.fill(next, Long.MIN_VALUE);
+                for (int d = 0; d <= k; ++d) {
+                    for (int cd = 0; cd <= k; ++cd) {
+                        int nd = Math.min(k, d+1);
+                        if (dpNotInvert[d] != Long.MIN_VALUE && childDP[nd] != Long.MIN_VALUE) {
+                            next[d] = Math.max(next[d], dpNotInvert[d] + childDP[nd]);
+                        }
+                    }
                 }
-                long opt1_max = -((long) nums[u] + sum_min_c_opt1);
-                long opt1_min = -((long) nums[u] + sum_max_c_opt1);
-                dp[u][d][0] = Math.max(dp[u][d][0], opt1_max);
-                dp[u][d][1] = Math.min(dp[u][d][1], opt1_min);
+                for (int d = 0; d <= k+1; ++d) {
+                    dpNotInvert[d] = next[d] == Long.MIN_VALUE ? dpNotInvert[d] : next[d];
+                }
             }
         }
+        long dpInvert = -nums[node];
+        if (childDPs.isEmpty()) {
+            dpInvert = -nums[node];
+        } else {
+            List<long[]> allStates = new ArrayList<>();
+            for (long[] childDP : childDPs) {
+                allStates.add(childDP);
+            }
+            long sum = 0;
+            for (long[] childDP : allStates) {
+                sum += childDP[1];
+            }
+            dpInvert += sum;
+        }
+        for (int d = 0; d < k; ++d) {
+            dp[node][d] = dpNotInvert[d];
+        }
+        dp[node][k] = Math.max(dpNotInvert[k], dpInvert);
+        dp[node][k+1] = dp[node][k];
     }
 }
 # @lc code=end
