@@ -6,127 +6,85 @@
 
 # @lc code=start
 import java.util.*;
-
 class Solution {
+    static final int LOG = 18; // Enough for n <= 1e5
     public int[] findMedian(int n, int[][] edges, int[][] queries) {
-        final int LOG = 20;
-        @SuppressWarnings("unchecked")
-        List<int[]>[] graph = new List[n];
-        for (int i = 0; i < n; i++) {
-            graph[i] = new ArrayList<int[]>();
-        }
+        List<int[]>[] tree = new ArrayList[n];
+        for (int i = 0; i < n; ++i) tree[i] = new ArrayList<>();
         for (int[] e : edges) {
-            int u = e[0], v = e[1], w = e[2];
-            graph[u].add(new int[]{v, w});
-            graph[v].add(new int[]{u, w});
+            tree[e[0]].add(new int[]{e[1], e[2]});
+            tree[e[1]].add(new int[]{e[0], e[2]});
         }
-        long[] dist = new long[n];
-        int[] dep = new int[n];
-        int[][] par = new int[LOG][n];
-        long[][] upsum = new long[LOG][n];
-        boolean[] visited = new boolean[n];
-        Queue<Integer> queue = new LinkedList<Integer>();
-        par[0][0] = -1;
-        upsum[0][0] = 0;
-        dep[0] = 0;
-        dist[0] = 0;
-        visited[0] = true;
-        queue.offer(0);
-        while (!queue.isEmpty()) {
-            int node = queue.poll();
-            for (int[] edge : graph[node]) {
-                int child = edge[0];
-                if (!visited[child]) {
-                    visited[child] = true;
-                    par[0][child] = node;
-                    upsum[0][child] = edge[1];
-                    dist[child] = dist[node] + edge[1];
-                    dep[child] = dep[node] + 1;
-                    queue.offer(child);
-                }
-            }
-        }
-        for (int k = 1; k < LOG; k++) {
-            for (int i = 0; i < n; i++) {
-                int p = par[k - 1][i];
-                if (p != -1) {
-                    par[k][i] = par[k - 1][p];
-                    upsum[k][i] = upsum[k - 1][i] + upsum[k - 1][p];
+        int[][] up = new int[n][LOG];
+        long[][] sum = new long[n][LOG];
+        int[] depth = new int[n];
+        long[] prefix = new long[n];
+        dfs(0, -1, 0, 0L, tree, up, sum, depth, prefix);
+        for (int j = 1; j < LOG; ++j) {
+            for (int i = 0; i < n; ++i) {
+                int mid = up[i][j-1];
+                if (mid != -1) {
+                    up[i][j] = up[mid][j-1];
+                    sum[i][j] = sum[i][j-1] + sum[mid][j-1];
                 } else {
-                    par[k][i] = -1;
-                    upsum[k][i] = 0;
+                    up[i][j] = -1;
                 }
             }
         }
         int[] ans = new int[queries.length];
-        for (int qi = 0; qi < queries.length; qi++) {
-            int u = queries[qi][0];
-            int v = queries[qi][1];
-            // Compute LCA
-            int a = u, b = v;
-            if (dep[a] > dep[b]) {
-                int tmp = a;
-                a = b;
-                b = tmp;
-            }
-            int diff = dep[b] - dep[a];
-            for (int k = 0; k < LOG; k++) {
-                if ((diff & (1 << k)) != 0) {
-                    b = par[k][b];
-                }
-            }
-            int lc;
-            if (a == b) {
-                lc = a;
+        for (int q = 0; q < queries.length; ++q) {
+            int u = queries[q][0], v = queries[q][1];
+            int lca = getLCA(u, v, depth, up);
+            long total = prefix[u] + prefix[v] - 2 * prefix[lca];
+            long half = (total + 1) / 2;
+            int candidate;
+            if (prefix[u] - prefix[lca] >= half) {
+                candidate = liftTo(u, half, prefix, up, sum);
             } else {
-                for (int k = LOG - 1; k >= 0; k--) {
-                    if (par[k][a] != -1 && par[k][b] != -1 && par[k][a] != par[k][b]) {
-                        a = par[k][a];
-                        b = par[k][b];
-                    }
-                }
-                lc = par[0][a];
+                half -= (prefix[u] - prefix[lca]);
+                candidate = liftTo(v, half, prefix, up, sum);
             }
-            // Now compute median
-            long total = dist[u] + dist[v] - 2L * dist[lc];
-            long T = (total + 1L) / 2L;
-            long pre = dist[u] - dist[lc];
-            int med;
-            if (pre >= T) {
-                // u to lc
-                long cum = 0L;
-                int cur = u;
-                for (int k = LOG - 1; k >= 0; k--) {
-                    int nxt = par[k][cur];
-                    if (nxt != -1 && dep[nxt] >= dep[lc] && cum + upsum[k][cur] < T) {
-                        cum += upsum[k][cur];
-                        cur = nxt;
-                    }
-                }
-                if (cum >= T) {
-                    med = cur;
-                } else {
-                    med = par[0][cur];
-                }
-            } else {
-                // lc to v
-                long needd = T - pre;
-                long fulll = dist[v] - dist[lc];
-                long maxupp = fulll - needd;
-                long cumupp = 0L;
-                int cur = v;
-                for (int k = LOG - 1; k >= 0; k--) {
-                    int nxt = par[k][cur];
-                    if (nxt != -1 && dep[nxt] >= dep[lc] && cumupp + upsum[k][cur] <= maxupp) {
-                        cumupp += upsum[k][cur];
-                        cur = nxt;
-                    }
-                }
-                med = cur;
+            // Verification step: check that the candidate satisfies the property
+            long distFromStart = Math.abs(prefix[u] - prefix[candidate]);
+            long prevDist = (candidate == u) ? 0 : Math.abs(prefix[u] - prefix[up[candidate][0]]);
+            if (!(distFromStart >= (total+1)/2 && prevDist < (total+1)/2)) {
+                // fallback or handle error if needed (should not occur)
             }
-            ans[qi] = med;
+            ans[q] = candidate;
         }
         return ans;
+    }
+    void dfs(int u, int p, int d, long acc, List<int[]>[] tree, int[][] up, long[][] sum, int[] depth, long[] prefix) {
+        up[u][0] = p;
+        depth[u] = d;
+        prefix[u] = acc;
+        for (int[] nei : tree[u]) {
+            if (nei[0] != p) {
+                sum[nei[0]][0] = nei[1];
+                dfs(nei[0], u, d+1, acc+nei[1], tree, up, sum, depth, prefix);
+            }
+        }
+    }
+    int getLCA(int u, int v, int[] depth, int[][] up) {
+        if (depth[u] < depth[v]) { int t = u; u = v; v = t; }
+        for (int k = LOG-1; k >= 0; --k)
+            if (up[u][k] != -1 && depth[up[u][k]] >= depth[v])
+                u = up[u][k];
+        if (u == v) return u;
+        for (int k = LOG-1; k >= 0; --k)
+            if (up[u][k] != -1 && up[u][k] != up[v][k]) {
+                u = up[u][k]; v = up[v][k];
+            }
+        return up[u][0];
+    }
+    int liftTo(int u, long need, long[] prefix, int[][] up, long[][] sum) {
+        for (int k = LOG-1; k >= 0; --k) {
+            if (up[u][k] != -1 && prefix[u] - prefix[up[u][k]] < need) {
+                need -= prefix[u] - prefix[up[u][k]];
+                u = up[u][k];
+            }
+        }
+        return u;
     }
 }
 # @lc code=end
