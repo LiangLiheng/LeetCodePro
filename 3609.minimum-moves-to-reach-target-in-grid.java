@@ -1,54 +1,41 @@
-#
 # @lc app=leetcode id=3609 lang=java
 #
 # [3609] Minimum Moves to Reach Target in Grid
 #
-
 # @lc code=start
 class Solution {
     public int minMoves(int sx, int sy, int tx, int ty) {
-        if (sx == tx && sy == ty) {
-            return 0;
-        }
-        java.util.Queue<int[]> q = new java.util.ArrayDeque<int[]>();
-        java.util.Set<java.lang.Long> vis = new java.util.HashSet<java.lang.Long>();
-        long key = ((long) sx << 32) | sy;
-        vis.add(key);
-        q.offer(new int[]{sx, sy, 0});
-        while (!q.isEmpty()) {
-            int[] cur = q.poll();
-            int x = cur[0];
-            int y = cur[1];
-            int steps = cur[2];
-            int m = Math.max(x, y);
-            // move x
-            long nextX = (long) x + m;
-            long nextY = y;
-            if (nextX <= tx && nextY <= ty) {
-                long nkey = (nextX << 32) | nextY;
-                if (!vis.contains(nkey)) {
-                    if (nextX == tx && nextY == ty) {
-                        return steps + 1;
-                    }
-                    vis.add(nkey);
-                    q.offer(new int[]{(int) nextX, (int) nextY, steps + 1});
+        int moves = 0;
+        while (tx > sx || ty > sy) {
+            // If tx >= ty and tx > sx, try to move x backward
+            if (tx >= ty && tx > sx) {
+                int m = Math.max(tx, ty);
+                int prev_tx = tx - m;
+                if (prev_tx >= sx && ty >= sy && m == Math.max(prev_tx, ty)) {
+                    tx = prev_tx;
+                    moves++;
+                    continue;
+                } else {
+                    return -1;
                 }
             }
-            // move y
-            nextX = x;
-            nextY = (long) y + m;
-            if (nextX <= tx && nextY <= ty) {
-                long nkey = (nextX << 32) | nextY;
-                if (!vis.contains(nkey)) {
-                    if (nextX == tx && nextY == ty) {
-                        return steps + 1;
-                    }
-                    vis.add(nkey);
-                    q.offer(new int[]{(int) nextX, (int) nextY, steps + 1});
+            // If ty > tx and ty > sy, try to move y backward
+            if (ty > tx && ty > sy) {
+                int m = Math.max(tx, ty);
+                int prev_ty = ty - m;
+                if (tx >= sx && prev_ty >= sy && m == Math.max(tx, prev_ty)) {
+                    ty = prev_ty;
+                    moves++;
+                    continue;
+                } else {
+                    return -1;
                 }
             }
+            // If neither move is possible, return -1
+            return -1;
         }
-        return -1;
+        // Final state verification
+        return (tx == sx && ty == sy) ? moves : -1;
     }
 }
 # @lc code=end
