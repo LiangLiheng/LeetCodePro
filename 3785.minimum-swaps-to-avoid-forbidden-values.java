@@ -3,37 +3,70 @@
 #
 # [3785] Minimum Swaps to Avoid Forbidden Values
 #
-
 # @lc code=start
+import java.util.*;
 class Solution {
     public int minSwaps(int[] nums, int[] forbidden) {
         int n = nums.length;
-        java.util.HashMap<Integer, Integer> countNum = new java.util.HashMap<>();
-        java.util.HashMap<Integer, Integer> countForb = new java.util.HashMap<>();
-        java.util.HashMap<Integer, Integer> countBad = new java.util.HashMap<>();
-        int bad = 0;
-        int maxBad = 0;
-        for (int i = 0; i < n; i++) {
-            countNum.put(nums[i], countNum.getOrDefault(nums[i], 0) + 1);
-            countForb.put(forbidden[i], countForb.getOrDefault(forbidden[i], 0) + 1);
-            if (nums[i] == forbidden[i]) {
-                int v = nums[i];
-                int curBad = countBad.getOrDefault(v, 0) + 1;
-                countBad.put(v, curBad);
-                maxBad = Math.max(maxBad, curBad);
-                bad++;
-            }
+        // Step 1: Find all positions where nums[i] == forbidden[i]
+        List<Integer> conflicts = new ArrayList<>();
+        for (int i = 0; i < n; ++i) {
+            if (nums[i] == forbidden[i]) conflicts.add(i);
         }
-        for (int v : countNum.keySet()) {
-            int tot = countNum.get(v);
-            int fb = countForb.getOrDefault(v, 0);
-            if (tot > n - fb) {
+        if (conflicts.isEmpty()) return 0;
+
+        // Step 2: Robust impossibility check
+        // For each value, ensure enough non-forbidden placements exist
+        Map<Integer, List<Integer>> valueToPositions = new HashMap<>();
+        for (int i = 0; i < n; ++i) {
+            valueToPositions.computeIfAbsent(nums[i], k -> new ArrayList<>()).add(i);
+        }
+        Map<Integer, Integer> forbiddenCount = new HashMap<>();
+        for (int i = 0; i < n; ++i) {
+            forbiddenCount.put(forbidden[i], forbiddenCount.getOrDefault(forbidden[i], 0) + 1);
+        }
+        for (Map.Entry<Integer, Integer> entry : forbiddenCount.entrySet()) {
+            int value = entry.getKey();
+            int count = entry.getValue();
+            int available = n - Collections.frequency(Arrays.asList(Arrays.stream(forbidden).boxed().toArray(Integer[]::new)), value);
+            if (valueToPositions.getOrDefault(value, new ArrayList<>()).size() > n - count) {
                 return -1;
             }
         }
-        if (bad == 0) return 0;
-        int match = Math.min(bad / 2, bad - maxBad);
-        return bad - match;
+        // Step 3: Decompose into cycles and resolve each
+        boolean[] visited = new boolean[n];
+        int swaps = 0;
+        for (int i = 0; i < n; ++i) {
+            if (visited[i] || nums[i] == forbidden[i]) continue;
+            int curr = i;
+            List<Integer> cycle = new ArrayList<>();
+            boolean hasConflict = false;
+            while (!visited[curr]) {
+                visited[curr] = true;
+                cycle.add(curr);
+                if (nums[curr] == forbidden[curr]) hasConflict = true;
+                // Find the next index where nums[next] should go
+                int next = -1;
+                for (int j = 0; j < n; ++j) {
+                    if (!visited[j] && nums[curr] == forbidden[j]) {
+                        next = j;
+                        break;
+                    }
+                }
+                if (next == -1) break;
+                curr = next;
+            }
+            if (cycle.size() > 1 && hasConflict) {
+                swaps += cycle.size() - 1;
+            } else if (cycle.size() == 1 && nums[cycle.get(0)] == forbidden[cycle.get(0)]) {
+                return -1;
+            }
+        }
+        // Step 4: Final universal verification
+        for (int i = 0; i < n; ++i) {
+            if (nums[i] == forbidden[i]) return -1;
+        }
+        return swaps;
     }
 }
 # @lc code=end
