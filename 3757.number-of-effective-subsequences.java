@@ -1,46 +1,37 @@
-#
-# @lc app=leetcode id=3757 lang=java
-#
-# [3757] Number of Effective Subsequences
-#
-
-# @lc code=start
 class Solution {
-  public int countEffective(int[] nums) {
-    int n = nums.length;
-    final int K = 20;
-    final int MAX = 1 << K;
-    int[] dp = new int[MAX];
-    int full_or = 0;
-    for (int x : nums) {
-      dp[x]++;
-      full_or |= x;
-    }
-    // SOS DP: dp[S] = sum freq[T] for T subset S
-    for (int b = 0; b < K; b++) {
-      for (int mask = 0; mask < MAX; mask++) {
-        if ((mask & (1 << b)) == 0) {
-          dp[mask | (1 << b)] += dp[mask];
+    static final int MOD = 1_000_000_007;
+    public int countEffective(int[] nums) {
+        int n = nums.length;
+        int allOr = 0;
+        for (int num : nums) allOr |= num;
+        List<Integer> bits = new ArrayList<>();
+        for (int b = 0; b < 32; ++b) if (((allOr >> b) & 1) != 0) bits.add(b);
+        int m = bits.size();
+        List<List<Integer>> contributors = new ArrayList<>();
+        for (int i = 0; i < m; ++i) contributors.add(new ArrayList<>());
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < m; ++j) {
+                if (((nums[i] >> bits.get(j)) & 1) != 0) contributors.get(j).add(i);
+            }
         }
-      }
+        long res = 0;
+        for (int mask = 1; mask < (1 << m); ++mask) {
+            Set<Integer> set = new HashSet<>();
+            int sign = Integer.bitCount(mask) % 2 == 1 ? 1 : -1;
+            for (int j = 0; j < m; ++j) if (((mask >> j) & 1) != 0) set.addAll(contributors.get(j));
+            long ways = pow2(set.size()) - 1;
+            if (ways < 0) ways += MOD;
+            res = (res + sign * ways + MOD) % MOD;
+        }
+        return (int)res;
     }
-    final long MOD = 1000000007L;
-    long[] pow2 = new long[n + 1];
-    pow2[0] = 1;
-    for (int i = 1; i <= n; i++) {
-      pow2[i] = pow2[i - 1] * 2 % MOD;
+    private long pow2(int n) {
+        long res = 1, base = 2;
+        while (n > 0) {
+            if ((n & 1) == 1) res = (res * base) % MOD;
+            base = (base * base) % MOD;
+            n >>= 1;
+        }
+        return res;
     }
-    long ans = 0;
-    for (int m = full_or; m > 0; m = (m - 1) & full_or) {
-      int pop = Integer.bitCount(m);
-      long sign = (pop & 1) == 1 ? 1L : (MOD - 1);
-      int comp = (MAX - 1) ^ m;
-      int num_zero = dp[comp];
-      int cnt = n - num_zero;
-      long ways = pow2[n - cnt];
-      ans = (ans + sign * ways % MOD) % MOD;
-    }
-    return (int) ans;
-  }
 }
-# @lc code=end
