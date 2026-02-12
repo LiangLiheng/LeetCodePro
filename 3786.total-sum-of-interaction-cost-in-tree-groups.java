@@ -3,74 +3,43 @@
 #
 # [3786] Total Sum of Interaction Cost in Tree Groups
 #
-
 # @lc code=start
 class Solution {
     public long interactionCosts(int n, int[][] edges, int[] group) {
-        java.util.List<java.util.List<java.util.Integer>> adj = new java.util.ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            adj.add(new java.util.ArrayList<>());
-        }
+        // Build the tree
+        List<Integer>[] tree = new List[n];
+        for (int i = 0; i < n; ++i) tree[i] = new ArrayList<>();
         for (int[] e : edges) {
-            int u = e[0], v = e[1];
-            adj.get(u).add(v);
-            adj.get(v).add(u);
+            tree[e[0]].add(e[1]);
+            tree[e[1]].add(e[0]);
         }
-        int[] totals = new int[21];
-        for (int i = 0; i < n; i++) {
-            totals[group[i]]++;
-        }
-        java.util.List<java.util.List<java.util.Integer>> children = new java.util.ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            children.add(new java.util.ArrayList<>());
-        }
-        int[] par = new int[n];
-        java.util.Arrays.fill(par, -1);
-        java.util.Queue<java.util.Integer> q = new java.util.LinkedList<>();
-        q.offer(0);
-        while (!q.isEmpty()) {
-            int u = q.poll();
-            for (int v : adj.get(u)) {
-                if (v != par[u]) {
-                    par[v] = u;
-                    children.get(u).add(v);
-                    q.offer(v);
+        long total = 0;
+        for (int g = 1; g <= 20; ++g) {
+            boolean[] inGroup = new boolean[n];
+            int groupCount = 0;
+            for (int i = 0; i < n; ++i) {
+                if (group[i] == g) {
+                    inGroup[i] = true;
+                    groupCount++;
                 }
             }
+            if (groupCount < 2) continue;
+            long[] res = new long[1];
+            dfs(0, -1, tree, inGroup, groupCount, res);
+            // Each pair is counted twice (once from each direction), so divide by 2
+            total += res[0] / 2;
         }
-        int[][] sub = new int[n][21];
-        int[] pending = new int[n];
-        java.util.Queue<java.util.Integer> qq = new java.util.LinkedList<>();
-        for (int i = 0; i < n; i++) {
-            pending[i] = children.get(i).size();
-            if (pending[i] == 0) {
-                qq.offer(i);
-            }
+        return total;
+    }
+    private int dfs(int node, int parent, List<Integer>[] tree, boolean[] inGroup, int groupCount, long[] res) {
+        int cnt = inGroup[node] ? 1 : 0;
+        for (int nei : tree[node]) {
+            if (nei == parent) continue;
+            int sub = dfs(nei, node, tree, inGroup, groupCount, res);
+            res[0] += (long) sub * (groupCount - sub);
+            cnt += sub;
         }
-        long ans = 0;
-        while (!qq.isEmpty()) {
-            int u = qq.poll();
-            sub[u][group[u]] = 1;
-            for (int v : children.get(u)) {
-                for (int g = 1; g <= 20; g++) {
-                    sub[u][g] += sub[v][g];
-                }
-            }
-            if (par[u] != -1) {
-                for (int g = 1; g <= 20; g++) {
-                    long sa = sub[u][g];
-                    long sb = totals[g] - sa;
-                    ans += sa * sb;
-                }
-            }
-            if (par[u] != -1) {
-                pending[par[u]]--;
-                if (pending[par[u]] == 0) {
-                    qq.offer(par[u]);
-                }
-            }
-        }
-        return ans;
+        return cnt;
     }
 }
 # @lc code=end
