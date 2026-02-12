@@ -3,100 +3,78 @@
 #
 # [3559] Number of Ways to Assign Edge Weights II
 #
-
 # @lc code=start
 class Solution {
+    private static final int MOD = 1_000_000_007;
+
     public int[] assignEdgeWeights(int[][] edges, int[][] queries) {
         int n = edges.length + 1;
-        java.util.List<java.util.List<Integer>> adj = new java.util.ArrayList<>(n + 1);
-        for (int i = 0; i <= n; i++) {
-            adj.add(new java.util.ArrayList<>());
+        List<Integer>[] tree = new ArrayList[n + 1];
+        for (int i = 1; i <= n; i++) tree[i] = new ArrayList<>();
+        for (int[] e : edges) {
+            tree[e[0]].add(e[1]);
+            tree[e[1]].add(e[0]);
         }
-        for (int[] edge : edges) {
-            int a = edge[0];
-            int b = edge[1];
-            adj.get(a).add(b);
-            adj.get(b).add(a);
-        }
-        final int MOD = 1000000007;
-        final int LOG = 18;
-        int[][] up = new int[n + 1][LOG];
-        int[] dep = new int[n + 1];
-        boolean[] vis = new boolean[n + 1];
-        java.util.Queue<Integer> q = new java.util.LinkedList<>();
-        q.offer(1);
-        vis[1] = true;
-        dep[1] = 0;
-        up[1][0] = 1;
-        while (!q.isEmpty()) {
-            int u = q.poll();
-            for (int v : adj.get(u)) {
-                if (!vis[v]) {
-                    vis[v] = true;
-                    dep[v] = dep[u] + 1;
-                    up[v][0] = u;
-                    q.offer(v);
-                }
+        int LOG = 17;
+        int[][] parent = new int[n + 1][LOG];
+        int[] depth = new int[n + 1];
+        dfs(tree, 1, 0, depth, parent, LOG);
+        // Binary lifting
+        for (int k = 1; k < LOG; k++) {
+            for (int v = 1; v <= n; v++) {
+                if (parent[v][k - 1] != 0)
+                    parent[v][k] = parent[parent[v][k - 1]][k - 1];
             }
         }
-        for (int j = 1; j < LOG; j++) {
-            for (int i = 1; i <= n; i++) {
-                int p = up[i][j - 1];
-                up[i][j] = up[p][j - 1];
-            }
-        }
-        int m = queries.length;
-        int[] answer = new int[m];
-        for (int i = 0; i < m; i++) {
-            int x = queries[i][0];
-            int y = queries[i][1];
-            if (x == y) {
-                answer[i] = 0;
-                continue;
-            }
-            int u = x, v = y;
-            if (dep[u] > dep[v]) {
-                int tmp = u;
-                u = v;
-                v = tmp;
-            }
-            int diff = dep[v] - dep[u];
-            for (int j = 0; j < LOG; j++) {
-                if ((diff & (1 << j)) != 0) {
-                    v = up[v][j];
-                }
-            }
+        int[] ans = new int[queries.length];
+        for (int i = 0; i < queries.length; i++) {
+            int u = queries[i][0], v = queries[i][1];
             if (u == v) {
-                int lca_dep = dep[u];
-                int k = dep[x] + dep[y] - 2 * lca_dep;
-                long ways = modPow(2L, k - 1L, MOD);
-                answer[i] = (int) ways;
+                ans[i] = 0;
                 continue;
             }
-            for (int j = LOG - 1; j >= 0; j--) {
-                if (up[u][j] != up[v][j]) {
-                    u = up[u][j];
-                    v = up[v][j];
-                }
-            }
-            int lca = up[u][0];
-            int k = dep[x] + dep[y] - 2 * dep[lca];
-            long ways = modPow(2L, k - 1L, MOD);
-            answer[i] = (int) ways;
+            int lca = getLCA(u, v, depth, parent, LOG);
+            int k = depth[u] + depth[v] - 2 * depth[lca];
+            // Verification step: ensure k is non-negative
+            if (k < 0) k = 0;
+            if (k == 0) ans[i] = 0;
+            else ans[i] = modPow(2, k - 1, MOD);
         }
-        return answer;
+        return ans;
     }
-    private long modPow(long base, long exp, long mod) {
-        long res = 1;
-        base %= mod;
-        while (exp > 0) {
-            if (exp % 2 == 1) {
-                res = res * base % mod;
+    private void dfs(List<Integer>[] tree, int u, int p, int[] depth, int[][] parent, int LOG) {
+        parent[u][0] = p;
+        for (int v : tree[u]) {
+            if (v != p) {
+                depth[v] = depth[u] + 1;
+                dfs(tree, v, u, depth, parent, LOG);
             }
-            base = base * base % mod;
-            exp /= 2;
         }
-        return res;
+    }
+    private int getLCA(int u, int v, int[] depth, int[][] parent, int LOG) {
+        if (depth[u] < depth[v]) { int t = u; u = v; v = t; }
+        for (int k = LOG - 1; k >= 0; k--) {
+            if (depth[u] - (1 << k) >= depth[v]) {
+                u = parent[u][k];
+            }
+        }
+        if (u == v) return u;
+        for (int k = LOG - 1; k >= 0; k--) {
+            if (parent[u][k] != 0 && parent[u][k] != parent[v][k]) {
+                u = parent[u][k];
+                v = parent[v][k];
+            }
+        }
+        return parent[u][0];
+    }
+    private int modPow(int a, int b, int mod) {
+        long ans = 1, base = a;
+        while (b > 0) {
+            if ((b & 1) == 1) ans = (ans * base) % mod;
+            base = (base * base) % mod;
+            b >>= 1;
+        }
+        return (int) ans;
     }
 }
 # @lc code=end
