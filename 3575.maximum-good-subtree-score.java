@@ -3,95 +3,76 @@
 #
 # [3575] Maximum Good Subtree Score
 #
-
 # @lc code=start
+import java.util.*;
 class Solution {
+    static final int MOD = 1000000007;
     public int goodSubtreeSum(int[] vals, int[] par) {
         int n = vals.length;
-        final long MOD = 1000000007L;
-        final int SZ = 1 << 10;
-        List<Integer>[] children = new ArrayList[n];
-        for (int i = 0; i < n; i++) {
-            children[i] = new ArrayList<>();
-        }
-        for (int i = 1; i < n; i++) {
-            children[par[i]].add(i);
-        }
-        int[] masks = new int[n];
-        boolean[] valid = new boolean[n];
-        for (int i = 0; i < n; i++) {
-            String s = String.valueOf(vals[i]);
-            boolean[] used = new boolean[10];
-            boolean ok = true;
-            int mask = 0;
-            for (char c : s.toCharArray()) {
-                int d = c - '0';
-                if (used[d]) {
-                    ok = false;
-                    break;
-                }
-                used[d] = true;
-                mask |= (1 << d);
-            }
-            if (ok) {
-                valid[i] = true;
-                masks[i] = mask;
-            }
-        }
-        long[] maxScore = new long[n];
-        java.util.function.Function<Integer, long[]> dfs = new java.util.function.Function<Integer, long[]>() {
-            @Override
-            public long[] apply(Integer uu) {
-                int u = uu;
-                long[] curr = new long[SZ];
-                java.util.Arrays.fill(curr, -1L);
-                curr[0] = 0L;
-                for (int v : children[u]) {
-                    long[] ch = apply(v);
-                    long[] nxt = new long[SZ];
-                    java.util.Arrays.fill(nxt, -1L);
-                    nxt[0] = 0L;
-                    for (int m1 = 0; m1 < SZ; m1++) {
-                        if (curr[m1] == -1L) continue;
-                        for (int m2 = 0; m2 < SZ; m2++) {
-                            if (ch[m2] == -1L) continue;
-                            if ((m1 & m2) == 0) {
-                                int nm = m1 | m2;
-                                long nsum = curr[m1] + ch[m2];
-                                nxt[nm] = Math.max(nxt[nm], nsum);
-                            }
-                        }
-                    }
-                    curr = nxt;
-                }
-                long[] sub = new long[SZ];
-                System.arraycopy(curr, 0, sub, 0, SZ);
-                if (valid[u]) {
-                    int mu = masks[u];
-                    long val = vals[u];
-                    for (int m = 0; m < SZ; m++) {
-                        if (sub[m] == -1L) continue;
-                        if ((m & mu) == 0) {
-                            int nm = m | mu;
-                            long nsum = sub[m] + val;
-                            sub[nm] = Math.max(sub[nm], nsum);
+        List<Integer>[] tree = new ArrayList[n];
+        for (int i = 0; i < n; ++i) tree[i] = new ArrayList<>();
+        for (int i = 1; i < n; ++i) tree[par[i]].add(i);
+        int[] maxScore = new int[n];
+        dfs(0, vals, tree, maxScore);
+        long sum = 0;
+        for (int s : maxScore) sum = (sum + s) % MOD;
+        return (int) sum;
+    }
+    // Returns: Map<digitMask, maxSum> for the subtree rooted at u
+    private Map<Integer, Integer> dfs(int u, int[] vals, List<Integer>[] tree, int[] maxScore) {
+        Map<Integer, Integer> dp = new HashMap<>();
+        int myMask = digitMask(vals[u]);
+        if (myMask != -1) dp.put(myMask, vals[u]);
+        for (int v : tree[u]) {
+            Map<Integer, Integer> childDP = dfs(v, vals, tree, maxScore);
+            Map<Integer, Integer> nextDP = new HashMap<>(dp);
+            // Decompose merge: for each pair, only combine if digits do not overlap, and verify validity
+            for (Map.Entry<Integer, Integer> ce : childDP.entrySet()) {
+                int cmask = ce.getKey(), csum = ce.getValue();
+                for (Map.Entry<Integer, Integer> de : dp.entrySet()) {
+                    int dmask = de.getKey(), dsum = de.getValue();
+                    if ((cmask & dmask) == 0) {
+                        int nmask = cmask | dmask;
+                        // Explicitly verify digit uniqueness
+                        if (Integer.bitCount(nmask) == Integer.bitCount(cmask) + Integer.bitCount(dmask)) {
+                            nextDP.put(nmask, Math.max(nextDP.getOrDefault(nmask, 0), csum + dsum));
                         }
                     }
                 }
-                long mx = 0L;
-                for (int i = 0; i < SZ; i++) {
-                    if (sub[i] > mx) mx = sub[i];
-                }
-                maxScore[u] = mx;
-                return sub;
+                // Also keep childDP alone
+                nextDP.put(cmask, Math.max(nextDP.getOrDefault(cmask, 0), csum));
             }
-        };
-        dfs.apply(0);
-        long ans = 0L;
-        for (long s : maxScore) {
-            ans = (ans + s) % MOD;
+            dp = nextDP;
         }
-        return (int) ans;
+        // Ensure single-node selection is possible
+        if (myMask != -1) dp.put(myMask, Math.max(dp.getOrDefault(myMask, 0), vals[u]));
+        // Verify all entries have unique digits (consistency check)
+        Iterator<Map.Entry<Integer, Integer>> it = dp.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Integer, Integer> entry = it.next();
+            if (!isUniqueDigits(entry.getKey())) it.remove();
+        }
+        int max = 0;
+        for (int s : dp.values()) max = Math.max(max, s);
+        maxScore[u] = max;
+        return dp;
+    }
+    // Returns bitmask of digits in x, or -1 if any digit repeats
+    private int digitMask(int x) {
+        int mask = 0;
+        while (x > 0) {
+            int d = x % 10;
+            if (((mask >> d) & 1) != 0) return -1;
+            mask |= 1 << d;
+            x /= 10;
+        }
+        return mask;
+    }
+    // Consistency check: returns true if mask has only unique digits
+    private boolean isUniqueDigits(int mask) {
+        // Each bit (0-9) represents a digit, so always unique
+        // Mask should not have more than 10 bits
+        return mask >= 0 && mask < (1<<10);
     }
 }
 # @lc code=end
