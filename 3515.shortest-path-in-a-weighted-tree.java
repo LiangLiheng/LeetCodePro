@@ -1,124 +1,76 @@
-#
-# @lc app=leetcode id=3515 lang=java
-#
-# [3515] Shortest Path in a Weighted Tree
-#
+import java.util.*;
 
-# @lc code=start
 class Solution {
-    static class FenwickTree {
-        int[] tree;
-        FenwickTree(int n) {
-            tree = new int[n + 2];
-        }
-        void update(int idx, int val) {
-            while (idx < tree.length) {
-                tree[idx] += val;
-                idx += idx & -idx;
-            }
-        }
-        int query(int idx) {
-            int sum = 0;
-            while (idx > 0) {
-                sum += tree[idx];
-                idx -= idx & -idx;
-            }
-            return sum;
-        }
-    }
-
-    private void dfs(int root, java.util.List<Integer>[] children, int[] tin, int[] tout, int[] timer) {
-        java.util.Stack<int[]> stack = new java.util.Stack<>();
-        stack.push(new int[]{root, 0});
-        while (!stack.isEmpty()) {
-            int[] curr = stack.peek();
-            int u = curr[0];
-            int ci = curr[1];
-            if (ci == 0) {
-                tin[u] = ++timer[0];
-            }
-            if (ci < children[u].size()) {
-                int v = children[u].get(ci);
-                curr[1]++;
-                stack.push(new int[]{v, 0});
-            } else {
-                tout[u] = timer[0];
-                stack.pop();
-            }
-        }
-    }
-
     public int[] treeQueries(int n, int[][] edges, int[][] queries) {
-        @SuppressWarnings("unchecked")
-        java.util.List<int[]>[] adj = new java.util.List[n + 1];
-        for (int i = 0; i <= n; ++i) {
-            adj[i] = new java.util.ArrayList<>();
+        Map<Integer, List<int[]>> tree = new HashMap<>();
+        Map<Long, Integer> edgeIdx = new HashMap<>();
+        for (int i = 1; i <= n; ++i) tree.put(i, new ArrayList<>());
+        for (int i = 0; i < edges.length; ++i) {
+            int u = edges[i][0], v = edges[i][1], w = edges[i][2];
+            tree.get(u).add(new int[]{v, w, i});
+            tree.get(v).add(new int[]{u, w, i});
+            edgeIdx.put(hash(u, v), i);
+            edgeIdx.put(hash(v, u), i);
         }
-        for (int[] e : edges) {
-            int u = e[0], v = e[1], w = e[2];
-            adj[u].add(new int[]{v, w});
-            adj[v].add(new int[]{u, w});
-        }
-
         int[] parent = new int[n + 1];
-        int[] weight = new int[n + 1];
-        boolean[] visited = new boolean[n + 1];
-        @SuppressWarnings("unchecked")
-        java.util.List<Integer>[] children = new java.util.List[n + 1];
-        for (int i = 0; i <= n; ++i) {
-            children[i] = new java.util.ArrayList<>();
-        }
-        java.util.Queue<Integer> queue = new java.util.LinkedList<>();
-        queue.offer(1);
-        visited[1] = true;
-        parent[1] = -1;
-        while (!queue.isEmpty()) {
-            int u = queue.poll();
-            for (int[] ne : adj[u]) {
-                int v = ne[0];
-                if (!visited[v]) {
-                    visited[v] = true;
-                    parent[v] = u;
-                    weight[v] = ne[1];
-                    children[u].add(v);
-                    queue.offer(v);
-                }
+        int[] in = new int[n + 1];
+        int[] out = new int[n + 1];
+        int[] time = new int[1];
+        dfs(1, 0, tree, parent, in, out, time);
+        BIT bit = new BIT(n + 2);
+        for (int i = 2; i <= n; ++i) {
+            int eidx = edgeIdx.get(hash(parent[i], i));
+            int w = 0;
+            for (int[] nei : tree.get(parent[i])) {
+                if (nei[0] == i) { w = nei[1]; break; }
             }
+            bit.add(in[i], w);
+            bit.add(out[i], -w);
         }
-
-        int[] tin = new int[n + 1];
-        int[] tout = new int[n + 1];
-        int[] timerr = {0};
-        dfs(1, children, tin, tout, timerr);
-
-        FenwickTree ft = new FenwickTree(n + 1);
-        for (int v = 2; v <= n; ++v) {
-            int w = weight[v];
-            ft.update(tin[v], w);
-            ft.update(tout[v] + 1, -w);
-        }
-
-        java.util.List<Integer> ans = new java.util.ArrayList<>();
+        List<Integer> ans = new ArrayList<>();
         for (int[] q : queries) {
             if (q[0] == 1) {
                 int u = q[1], v = q[2], nw = q[3];
-                int child = (parent[v] == u ? v : u);
-                int oldw = weight[child];
-                int delta = nw - oldw;
-                weight[child] = nw;
-                ft.update(tin[child], delta);
-                ft.update(tout[child] + 1, -delta);
+                int node = parent[u] == v ? u : v;
+                int oldw = bit.query(in[node]) - bit.query(in[node] - 1);
+                bit.add(in[node], nw - oldw);
+                bit.add(out[node], oldw - nw);
             } else {
                 int x = q[1];
-                ans.add(ft.query(tin[x]));
+                int d = bit.query(in[x]);
+                ans.add(d);
             }
         }
-
-        int[] result = new int[ans.size()];
-        for (int i = 0; i < ans.size(); ++i) {
-            result[i] = ans.get(i);
+        int[] res = new int[ans.size()];
+        for (int i = 0; i < ans.size(); ++i) res[i] = ans.get(i);
+        return res;
+    }
+    private static long hash(int u, int v) {
+        return ((long)u << 32) | v;
+    }
+    private static void dfs(int u, int p, Map<Integer, List<int[]>> tree, int[] parent, int[] in, int[] out, int[] time) {
+        parent[u] = p;
+        in[u] = ++time[0];
+        for (int[] nei : tree.get(u)) {
+            int v = nei[0];
+            if (v != p) {
+                dfs(v, u, tree, parent, in, out, time);
+            }
         }
-        return result;
+        out[u] = ++time[0];
+    }
+    static class BIT {
+        int[] tree;
+        public BIT(int n) {
+            tree = new int[n + 2];
+        }
+        public void add(int i, int v) {
+            while (i < tree.length) { tree[i] += v; i += i & -i; }
+        }
+        public int query(int i) {
+            int res = 0;
+            while (i > 0) { res += tree[i]; i -= i & -i; }
+            return res;
+        }
     }
 }
-# @lc code=end
