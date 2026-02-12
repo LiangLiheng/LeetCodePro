@@ -5,55 +5,65 @@
 #
 
 # @lc code=start
+import java.util.*;
 class Solution {
     public int maxPartitionFactor(int[][] points) {
         int n = points.length;
-        if (n == 2) {
-            return 0;
-        }
-        long left = 0;
-        long right = 400000001L;
-        while (left < right) {
-            long mid = left + (right - left + 1) / 2;
-            if (check(points, mid, n)) {
-                left = mid;
-            } else {
-                right = mid - 1;
-            }
-        }
-        return (int) left;
-    }
-    private boolean check(int[][] points, long k, int n) {
-        int[] color = new int[n];
-        for (int i = 0; i < n; i++) {
-            color[i] = -1;
-        }
-        for (int i = 0; i < n; i++) {
-            if (color[i] == -1) {
-                int[] queue = new int[n];
-                int front = 0;
-                int rear = 0;
-                queue[rear++] = i;
-                color[i] = 0;
-                while (front < rear) {
-                    int u = queue[front++];
-                    for (int v = 0; v < n; v++) {
-                        if (u == v) continue;
-                        long dx = Math.abs((long) points[u][0] - points[v][0]);
-                        long dy = Math.abs((long) points[u][1] - points[v][1]);
-                        if (dx + dy < k) {
-                            if (color[v] == -1) {
-                                color[v] = 1 - color[u];
-                                queue[rear++] = v;
-                            } else if (color[v] == color[u]) {
-                                return false;
+        if (n == 2) return 0;
+        List<Integer> dists = new ArrayList<>();
+        for (int i = 0; i < n; ++i)
+            for (int j = i + 1; j < n; ++j)
+                dists.add(Math.abs(points[i][0] - points[j][0]) + Math.abs(points[i][1] - points[j][1]));
+        Set<Integer> unique = new HashSet<>(dists);
+        List<Integer> sorted = new ArrayList<>(unique);
+        Collections.sort(sorted);
+
+        int left = 0, right = sorted.size() - 1, ans = 0;
+        while (left <= right) {
+            int mid = (left + right) / 2;
+            int threshold = sorted.get(mid);
+            // Build the conflict graph: edge if distance < threshold
+            List<List<Integer>> graph = new ArrayList<>();
+            for (int i = 0; i < n; ++i) graph.add(new ArrayList<>());
+            for (int i = 0; i < n; ++i)
+                for (int j = i + 1; j < n; ++j) {
+                    int dist = Math.abs(points[i][0] - points[j][0]) + Math.abs(points[i][1] - points[j][1]);
+                    if (dist < threshold) {
+                        graph.get(i).add(j);
+                        graph.get(j).add(i);
+                    }
+                }
+            // Check if the conflict graph is bipartite
+            int[] color = new int[n];
+            Arrays.fill(color, -1);
+            boolean isBipartite = true;
+            for (int i = 0; i < n && isBipartite; ++i) {
+                if (color[i] == -1) {
+                    Queue<Integer> queue = new LinkedList<>();
+                    queue.add(i);
+                    color[i] = 0;
+                    while (!queue.isEmpty() && isBipartite) {
+                        int cur = queue.poll();
+                        for (int nei : graph.get(cur)) {
+                            if (color[nei] == -1) {
+                                color[nei] = 1 - color[cur];
+                                queue.add(nei);
+                            } else if (color[nei] == color[cur]) {
+                                isBipartite = false;
+                                break;
                             }
                         }
                     }
                 }
             }
+            if (isBipartite) {
+                ans = threshold;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
         }
-        return true;
+        return ans;
     }
 }
 # @lc code=end
