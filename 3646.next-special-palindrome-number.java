@@ -1,85 +1,74 @@
-#
-# @lc app=leetcode id=3646 lang=java
-#
-# [3646] Next Special Palindrome Number
-#
-
-# @lc code=start
 class Solution {
     public long specialPalindrome(long n) {
-        long[] min_greater = {Long.MAX_VALUE};
-        int[] evens = {2, 4, 6, 8};
-        int[] odds = {1, 3, 5, 7, 9};
-        
-        // Even length: subsets of evens
-        for (int mask = 0; mask < (1 << 4); mask++) {
-            int[] cnt = new int[10];
-            int len = 0;
-            for (int i = 0; i < 4; i++) {
-                if ((mask & (1 << i)) != 0) {
-                    int d = evens[i];
-                    cnt[d] = d;
-                    len += d;
-                }
-            }
-            if (len == 0 || len > 19) continue;
-            int[] pcount = new int[10];
-            for (int d = 1; d <= 9; d++) pcount[d] = cnt[d] / 2;
-            generate(0, new StringBuilder(), pcount, min_greater, n, len / 2, -1, len);
-        }
-        
-        // Odd length: one odd + subsets of evens
-        for (int o : odds) {
-            for (int mask = 0; mask < (1 << 4); mask++) {
-                int[] cnt = new int[10];
-                cnt[o] = o;
-                int len = o;
-                for (int i = 0; i < 4; i++) {
-                    if ((mask & (1 << i)) != 0) {
-                        int d = evens[i];
-                        cnt[d] = d;
-                        len += d;
-                    }
-                }
-                if (len == 0 || len > 19) continue;
-                int[] pcount = new int[10];
-                for (int d = 1; d <= 9; d++) pcount[d] = cnt[d] / 2;
-                generate(0, new StringBuilder(), pcount, min_greater, n, len / 2, o, len);
-            }
-        }
-        
-        return min_greater[0] == Long.MAX_VALUE ? 0 : min_greater[0]; // 0 fallback unlikely
+        long[] minResult = new long[] { Long.MAX_VALUE };
+        generateDigitMultisets(n, new int[10], 1, 0, minResult);
+        return minResult[0];
     }
-    
-    private void generate(int pos, StringBuilder pairs, int[] rem, long[] min_g, long n, int nump, int center, int L) {
-        if (pos == nump) {
-            StringBuilder full = new StringBuilder(pairs);
-            if (L % 2 == 1) {
-                full.append((char) ('0' + center));
-            }
-            String left_part = full.toString();
-            String pair_str = left_part.substring(0, nump);
-            StringBuilder revb = new StringBuilder(pair_str);
-            revb.reverse();
-            String num_str = left_part + revb.toString();
-            try {
-                long num = Long.parseLong(num_str);
-                if (num > n && num < min_g[0]) {
-                    min_g[0] = num;
-                }
-            } catch (NumberFormatException ignored) {
+
+    // Explore all combinations of digit counts for digits 1-9
+    private void generateDigitMultisets(long n, int[] counts, int digit, int length, long[] minResult) {
+        if (digit == 10) {
+            if (length == 0) return; // Skip empty multiset
+            if (canFormPalindrome(counts)) {
+                buildPalindromes(n, counts, minResult);
             }
             return;
         }
-        for (int d = 1; d <= 9; d++) {
-            if (rem[d] > 0) {
-                rem[d]--;
-                pairs.append((char) ('0' + d));
-                generate(pos + 1, pairs, rem, min_g, n, nump, center, L);
-                pairs.deleteCharAt(pairs.length() - 1);
-                rem[d]++;
+        // Option 1: Do not use this digit
+        generateDigitMultisets(n, counts, digit + 1, length, minResult);
+        // Option 2: Use this digit exactly k times
+        counts[digit] = digit;
+        generateDigitMultisets(n, counts, digit + 1, length + digit, minResult);
+        counts[digit] = 0;
+    }
+
+    // Check if the digit counts can form a palindrome
+    private boolean canFormPalindrome(int[] counts) {
+        int odd = 0;
+        for (int d = 1; d <= 9; ++d) {
+            if (counts[d] % 2 != 0) odd++;
+        }
+        return odd <= 1;
+    }
+
+    // Generate all palindromic numbers from the digit counts
+    private void buildPalindromes(long n, int[] counts, long[] minResult) {
+        int len = 0;
+        for (int d = 1; d <= 9; ++d) len += counts[d];
+        int[] halfCounts = new int[10];
+        int midDigit = -1;
+        for (int d = 1; d <= 9; ++d) {
+            halfCounts[d] = counts[d] / 2;
+            if (counts[d] % 2 == 1) midDigit = d;
+        }
+        List<Integer> half = new ArrayList<>();
+        generateHalfPermutations(halfCounts, len / 2, half, midDigit, n, minResult);
+    }
+
+    // Recursively construct all unique half-side permutations for palindromes
+    private void generateHalfPermutations(int[] halfCounts, int remaining, List<Integer> path, int midDigit, long n, long[] minResult) {
+        if (remaining == 0) {
+            if (!path.isEmpty() && path.get(0) == 0) return; // No leading zeros
+            StringBuilder sb = new StringBuilder();
+            for (int d : path) sb.append(d);
+            String halfStr = sb.toString();
+            StringBuilder palindrome = new StringBuilder(halfStr);
+            if (midDigit != -1) palindrome.append(midDigit);
+            palindrome.append(new StringBuilder(halfStr).reverse());
+            long candidate = Long.parseLong(palindrome.toString());
+            if (candidate > n && candidate < minResult[0]) {
+                minResult[0] = candidate;
+            }
+            return;
+        }
+        for (int d = 1; d <= 9; ++d) {
+            if (halfCounts[d] > 0) {
+                halfCounts[d]--;
+                path.add(d);
+                generateHalfPermutations(halfCounts, remaining - 1, path, midDigit, n, minResult);
+                path.remove(path.size() - 1);
+                halfCounts[d]++;
             }
         }
     }
 }
-# @lc code=end
