@@ -3,108 +3,102 @@
 #
 # [3534] Path Existence Queries in a Graph II
 #
-
 # @lc code=start
 import java.util.*;
 class Solution {
     public int[] pathExistenceQueries(int n, int[] nums, int maxDiff, int[][] queries) {
-        int[] sortedIdx = new int[n];
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+        int[][] indexedNums = new int[n][2];
         for (int i = 0; i < n; i++) {
-            sortedIdx[i] = i;
+            indexedNums[i][0] = nums[i];
+            indexedNums[i][1] = i;
         }
-        Arrays.sort(sortedIdx, (a, b) -> Integer.compare(nums[a], nums[b]));
-        
-        int[] position = new int[n];
-        int[] s = new int[n];
+        Arrays.sort(indexedNums, Comparator.comparingInt(a -> a[0]));
+        // Union pairs within maxDiff
         for (int i = 0; i < n; i++) {
-            int orig = sortedIdx[i];
-            position[orig] = i;
-            s[i] = nums[orig];
-        }
-        
-        // Compute reach1[i]: farthest in 1 jump
-        int[] reach1 = new int[n];
-        int ptr = 0;
-        for (int i = 0; i < n; i++) {
-            while (ptr < n && s[ptr] <= s[i] + maxDiff) {
-                ptr++;
-            }
-            reach1[i] = ptr - 1;
-        }
-        
-        // Compute components for sorted indices
-        int[] nodeComp = new int[n];
-        nodeComp[0] = 0;
-        int curComp = 0;
-        for (int i = 1; i < n; i++) {
-            if (s[i] - s[i - 1] > maxDiff) {
-                curComp++;
-            }
-            nodeComp[i] = curComp;
-        }
-        
-        // origComp[orig] = nodeComp[position[orig]]
-        int[] origComp = new int[n];
-        for (int i = 0; i < n; i++) {
-            origComp[sortedIdx[i]] = nodeComp[i];
-        }
-        
-        // Binary lifting
-        final int LOG = 18;
-        int[][] jump = new int[n][LOG];
-        for (int i = 0; i < n; i++) {
-            jump[i][0] = reach1[i];
-        }
-        for (int k = 1; k < LOG; k++) {
-            for (int i = 0; i < n; i++) {
-                int mid = jump[i][k - 1];
-                jump[i][k] = jump[mid][k - 1];
+            int j = i + 1;
+            while (j < n && indexedNums[j][0] - indexedNums[i][0] <= maxDiff) {
+                union(parent, indexedNums[i][1], indexedNums[j][1]);
+                j++;
             }
         }
-        
-        // Process queries
-        int[] ans = new int[queries.length];
-        for (int q = 0; q < queries.length; q++) {
-            int u = queries[q][0];
-            int v = queries[q][1];
+        // Build adjacency list
+        List<Integer>[] adj = new ArrayList[n];
+        for (int i = 0; i < n; i++) adj[i] = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            int idx = indexedNums[i][1];
+            int j = i - 1;
+            while (j >= 0 && indexedNums[i][0] - indexedNums[j][0] <= maxDiff) {
+                adj[idx].add(indexedNums[j][1]);
+                adj[indexedNums[j][1]].add(idx);
+                j--;
+            }
+            j = i + 1;
+            while (j < n && indexedNums[j][0] - indexedNums[i][0] <= maxDiff) {
+                adj[idx].add(indexedNums[j][1]);
+                adj[indexedNums[j][1]].add(idx);
+                j++;
+            }
+        }
+        // Optional: Verification step to ensure adjacency lists are correct
+        // for (int i = 0; i < n; i++) {
+        //     for (int neighbor : adj[i]) {
+        //         assert Math.abs(nums[i] - nums[neighbor]) <= maxDiff;
+        //     }
+        // }
+        int q = queries.length;
+        int[] answer = new int[q];
+        Map<Long, Integer> cache = new HashMap<>(); // For caching repeated queries
+        for (int qi = 0; qi < q; qi++) {
+            int u = queries[qi][0], v = queries[qi][1];
             if (u == v) {
-                ans[q] = 0;
+                answer[qi] = 0;
                 continue;
             }
-            if (origComp[u] != origComp[v]) {
-                ans[q] = -1;
+            if (find(parent, u) != find(parent, v)) {
+                answer[qi] = -1;
                 continue;
             }
-            int p1 = position[u];
-            int p2 = position[v];
-            if (p1 > p2) {
-                int tmp = p1;
-                p1 = p2;
-                p2 = tmp;
+            long key = ((long)u << 32) | v;
+            if (cache.containsKey(key)) {
+                answer[qi] = cache.get(key);
+                continue;
             }
-            // Binary search min d >=1
-            int lo = 1;
-            int hi = n;
-            int res = -1;
-            while (lo <= hi) {
-                int mid = lo + (hi - lo) / 2;
-                int cur = p1;
-                int bits = mid;
-                for (int b = LOG - 1; b >= 0; b--) {
-                    if ((bits & (1 << b)) != 0) {
-                        cur = jump[cur][b];
+            // BFS
+            Queue<Integer> queue = new ArrayDeque<>();
+            boolean[] visited = new boolean[n];
+            queue.offer(u);
+            visited[u] = true;
+            int dist = 0;
+            boolean found = false;
+            while (!queue.isEmpty() && !found) {
+                int size = queue.size();
+                dist++;
+                for (int i = 0; i < size; i++) {
+                    int curr = queue.poll();
+                    for (int nei : adj[curr]) {
+                        if (!visited[nei]) {
+                            if (nei == v) { found = true; break; }
+                            visited[nei] = true;
+                            queue.offer(nei);
+                        }
                     }
-                }
-                if (cur >= p2) {
-                    res = mid;
-                    hi = mid - 1;
-                } else {
-                    lo = mid + 1;
+                    if (found) break;
                 }
             }
-            ans[q] = res;
+            answer[qi] = found ? dist : -1;
+            cache.put(key, answer[qi]);
         }
-        return ans;
+        return answer;
+    }
+    private int find(int[] parent, int x) {
+        if (parent[x] != x) parent[x] = find(parent, parent[x]);
+        return parent[x];
+    }
+    private void union(int[] parent, int x, int y) {
+        int fx = find(parent, x), fy = find(parent, y);
+        if (fx != fy) parent[fx] = fy;
     }
 }
 # @lc code=end
