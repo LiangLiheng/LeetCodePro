@@ -1,42 +1,6 @@
-#
-# @lc app=leetcode id=3729 lang=java
-#
-# [3729] Count Distinct Subarrays Divisible by K in Sorted Array
-#
-
-# @lc code=start
-class Solution {
-  public long numGoodSubarrays(int[] nums, int k) {
-    long total = 0L;
-    java.util.Map<Integer, java.util.Long> freq = new java.util.HashMap<>();
-    freq.put(0, 1L);
-    long prefix = 0L;
-    long KK = k;
-    for (int num : nums) {
-      prefix = (prefix + ((long) num % KK + KK) % KK) % KK;
-      int key = (int) prefix;
-      if (freq.containsKey(key)) {
-        total += freq.get(key);
-      }
-      freq.put(key, freq.getOrDefault(key, 0L) + 1L);
-    }
-    long subtract = 0L;
-    int n = nums.length;
-    int i = 0;
-    while (i < n) {
-      int val = nums[i];
-      int start = i;
-      while (i < n && nums[i] == val) ++i;
-      int cnt = i - start;
-      long modv = ((long) val % KK + KK) % KK;
-      for (int l = 1; l <= cnt; ++l) {
-        long sum_mod = ((long) l * modv % KK + KK) % KK;
-        if (sum_mod == 0) {
-          subtract += (cnt - l);
-        }
-      }
-    }
-    return total - subtract;
-  }
-}
-# @lc code=end
+Step 1: Analyze the problem and input constraints to determine feasible solution strategies.
+Step 2: Estimate the time and space complexity of potential approaches (e.g., brute-force, prefix sums, hashing) and compare against the input size constraints.
+Step 3: If a potential approach is not scalable, decompose the problem and seek more efficient, general algorithmic patterns (e.g., using prefix sums and hashing for divisibility checks, leveraging sortedness for optimization).
+Step 4: Explicitly leverage input properties such as sortedness, uniqueness, or monotonicity to guide optimization and reduce redundant computation.
+Step 5: Integrate a verification/self-check step to confirm the feasibility and correctness of the solution for the largest allowed inputs before proceeding with implementation.
+Step 6: After implementation, reflect on scalability, correctness, and potential general improvements for future tasks.
