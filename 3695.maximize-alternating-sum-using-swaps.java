@@ -6,57 +6,49 @@
 
 # @lc code=start
 import java.util.*;
-
 class Solution {
-    private int find(int[] parent, int x) {
-        return parent[x] == x ? x : (parent[x] = find(parent, parent[x]));
-    }
-
     public long maxAlternatingSum(int[] nums, int[][] swaps) {
         int n = nums.length;
+        // 1. Find connected components using Union-Find
         int[] parent = new int[n];
-        int[] rank = new int[n];
-        for (int i = 0; i < n; ++i) {
-            parent[i] = i;
-        }
+        for (int i = 0; i < n; ++i) parent[i] = i;
         for (int[] swap : swaps) {
-            int rootP = find(parent, swap[0]);
-            int rootQ = find(parent, swap[1]);
-            if (rootP != rootQ) {
-                if (rank[rootP] > rank[rootQ]) {
-                    parent[rootQ] = rootP;
-                } else if (rank[rootP] < rank[rootQ]) {
-                    parent[rootP] = rootQ;
-                } else {
-                    parent[rootQ] = rootP;
-                    ++rank[rootP];
-                }
-            }
+            union(parent, swap[0], swap[1]);
         }
-        Map<Integer, List<Integer>> compValues = new HashMap<>();
-        Map<Integer, Integer> evenCounts = new HashMap<>();
+        // 2. Group indices by component
+        Map<Integer, List<Integer>> groups = new HashMap<>();
         for (int i = 0; i < n; ++i) {
             int root = find(parent, i);
-            compValues.computeIfAbsent(root, k -> new ArrayList<>()).add(nums[i]);
-            if (i % 2 == 0) {
-                evenCounts.merge(root, 1, Integer::sum);
+            groups.computeIfAbsent(root, k -> new ArrayList<>()).add(i);
+        }
+        int[] res = new int[n];
+        // 3. For each component, assign largest values to smallest/even indices
+        for (List<Integer> group : groups.values()) {
+            List<Integer> idxs = new ArrayList<>(group);
+            List<Integer> vals = new ArrayList<>();
+            for (int idx : idxs) vals.add(nums[idx]);
+            Collections.sort(idxs);
+            Collections.sort(vals, Collections.reverseOrder());
+            for (int j = 0; j < idxs.size(); ++j) {
+                res[idxs.get(j)] = vals.get(j);
             }
         }
+        // 4. Compute the alternating sum
         long ans = 0;
-        for (Map.Entry<Integer, List<Integer>> entry : compValues.entrySet()) {
-            List<Integer> vals = entry.getValue();
-            int numEven = evenCounts.getOrDefault(entry.getKey(), 0);
-            vals.sort((a, b) -> b.compareTo(a)); // descending
-            long contrib = 0;
-            for (int j = 0; j < numEven; ++j) {
-                contrib += vals.get(j);
-            }
-            for (int j = numEven; j < vals.size(); ++j) {
-                contrib -= vals.get(j);
-            }
-            ans += contrib;
+        for (int i = 0; i < n; ++i) {
+            if (i % 2 == 0) ans += res[i];
+            else ans -= res[i];
         }
+        // 5. Optionally, verify that each component's values are assigned as intended (debug/validation step)
         return ans;
+    }
+    private int find(int[] parent, int x) {
+        if (parent[x] != x) parent[x] = find(parent, parent[x]);
+        return parent[x];
+    }
+    private void union(int[] parent, int x, int y) {
+        int px = find(parent, x), py = find(parent, y);
+        if (px != py) parent[px] = py;
     }
 }
 # @lc code=end
