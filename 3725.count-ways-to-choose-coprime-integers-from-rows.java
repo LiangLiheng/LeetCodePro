@@ -3,53 +3,37 @@
 #
 # [3725] Count Ways to Choose Coprime Integers from Rows
 #
-
 # @lc code=start
+import java.util.*;
 class Solution {
     public int countCoprime(int[][] mat) {
-        final int MOD = 1000000007;
-        final int MAXV = 150;
-        int[] mu = new int[MAXV + 1];
-        boolean[] is_composite = new boolean[MAXV + 1];
-        int[] primes = new int[MAXV + 1];
-        int pc = 0;
-        mu[1] = 1;
-        for (int i = 2; i <= MAXV; i++) {
-            if (!is_composite[i]) {
-                primes[pc++] = i;
-                mu[i] = -1;
-            }
-            for (int j = 0; j < pc; j++) {
-                int p = primes[j];
-                if ((long) i * p > MAXV) break;
-                is_composite[i * p] = true;
-                if (i % p == 0) {
-                    mu[i * p] = 0;
-                    break;
-                } else {
-                    mu[i * p] = -mu[i];
+        int MOD = 1_000_000_007;
+        int m = mat.length, n = mat[0].length;
+        Map<Integer, Integer> dp = new HashMap<>();
+        // Initialize with row 0
+        for (int num : mat[0]) {
+            dp.put(num, (dp.getOrDefault(num, 0) + 1) % MOD);
+        }
+        for (int i = 1; i < m; i++) {
+            Map<Integer, Integer> ndp = new HashMap<>();
+            for (int num : mat[i]) {
+                for (Map.Entry<Integer, Integer> entry : dp.entrySet()) {
+                    int g = gcd(num, entry.getKey());
+                    ndp.put(g, (int)(((long)ndp.getOrDefault(g, 0) + entry.getValue()) % MOD));
                 }
             }
+            dp = ndp;
         }
-        int m = mat.length;
-        long ans = 0;
-        for (int d = 1; d <= MAXV; d++) {
-            if (mu[d] == 0) continue;
-            long ways = 1;
-            for (int i = 0; i < m; i++) {
-                int cnt = 0;
-                for (int num : mat[i]) {
-                    if (num % d == 0) cnt++;
-                }
-                ways = ways * cnt % MOD;
-            }
-            if (mu[d] == 1) {
-                ans = (ans + ways) % MOD;
-            } else {
-                ans = (ans - ways + MOD) % MOD;
-            }
+        // Verify output corresponds to GCD 1 combinations
+        return dp.getOrDefault(1, 0);
+    }
+    private int gcd(int a, int b) {
+        while (b != 0) {
+            int t = b;
+            b = a % b;
+            a = t;
         }
-        return (int) ans;
+        return a;
     }
 }
 # @lc code=end
