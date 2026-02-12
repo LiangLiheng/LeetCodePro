@@ -3,22 +3,22 @@
 #
 # [3779] Minimum Number of Operations to Have Distinct Elements
 #
-
 # @lc code=start
 class Solution {
     public int minOperations(int[] nums) {
         int n = nums.length;
-        java.util.HashMap<Integer, Integer> lastSeen = new java.util.HashMap<>();
-        int maxSecondLast = -1;
-        for (int i = n - 1; i >= 0; i--) {
-            int v = nums[i];
-            if (lastSeen.containsKey(v)) {
-                maxSecondLast = Math.max(maxSecondLast, i);
-            }
-            lastSeen.put(v, i);
+        int ops = 0;
+        int start = 0;
+        while (start < n) {
+            // Check if the current subarray is all distinct
+            java.util.Set<Integer> set = new java.util.HashSet<>();
+            for (int i = start; i < n; i++) set.add(nums[i]);
+            if (set.size() == n - start) break;
+            // Remove up to first three elements
+            start = Math.min(n, start + 3);
+            ops++;
         }
-        int i0 = maxSecondLast == -1 ? 0 : maxSecondLast + 1;
-        return (i0 + 2) / 3;
+        return ops;
     }
 }
 # @lc code=end
