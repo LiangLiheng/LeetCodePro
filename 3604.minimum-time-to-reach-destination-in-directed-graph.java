@@ -3,49 +3,47 @@
 #
 # [3604] Minimum Time to Reach Destination in Directed Graph
 #
-
 # @lc code=start
 import java.util.*;
 class Solution {
     public int minTime(int n, int[][] edges) {
-        List<List<int[]>> adj = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            adj.add(new ArrayList<>());
-        }
+        // Step 1: Build adjacency list
+        List<int[]>[] graph = new ArrayList[n];
+        for (int i = 0; i < n; i++) graph[i] = new ArrayList<>();
         for (int[] edge : edges) {
-            int u = edge[0];
-            int v = edge[1];
-            int start = edge[2];
-            int endd = edge[3];
-            adj.get(u).add(new int[]{v, start, endd});
+            int u = edge[0], v = edge[1], s = edge[2], e = edge[3];
+            graph[u].add(new int[]{v, s, e});
         }
-        long[] dist = new long[n];
-        long INF = 1L << 60;
-        Arrays.fill(dist, INF);
-        dist[0] = 0;
-        PriorityQueue<long[]> pq = new PriorityQueue<>((a, b) -> Long.compare(a[0], b[0]));
-        pq.offer(new long[]{0, 0});
+        // Step 2: Min-heap for (time, node)
+        PriorityQueue<int[]> pq = new PriorityQueue<>(Comparator.comparingInt(a -> a[0]));
+        pq.offer(new int[]{0, 0}); // {currentTime, node}
+        // Step 4: Track visited (node, time) pairs
+        Set<Long> visited = new HashSet<>();
         while (!pq.isEmpty()) {
-            long[] p = pq.poll();
-            long t = p[0];
-            int u = (int) p[1];
-            if (t > dist[u]) continue;
-            for (int[] e : adj.get(u)) {
-                int v = e[0];
-                int s = e[1];
-                int ee = e[2];
-                long dep = Math.max(t, (long) s);
-                if (dep <= ee) {
-                    long nt = dep + 1;
-                    if (nt < dist[v]) {
-                        dist[v] = nt;
-                        pq.offer(new long[]{nt, v});
+            int[] curr = pq.poll();
+            int time = curr[0], node = curr[1];
+            long state = ((long)node << 32) | time;
+            if (!visited.add(state)) continue;
+            if (node == n - 1) return time;
+            // Step 3a: Try all outgoing edges
+            for (int[] edge : graph[node]) {
+                int nei = edge[0], start = edge[1], end = edge[2];
+                int depart = Math.max(time, start);
+                if (depart <= end) {
+                    int arrive = depart + 1;
+                    long nextState = ((long)nei << 32) | arrive;
+                    if (!visited.contains(nextState)) {
+                        pq.offer(new int[]{arrive, nei});
                     }
                 }
             }
+            // Step 3b: Try waiting at current node
+            long waitState = ((long)node << 32) | (time + 1);
+            if (!visited.contains(waitState)) {
+                pq.offer(new int[]{time + 1, node});
+            }
         }
-        long ans = dist[n - 1];
-        return ans == INF ? -1 : (int) ans;
+        return -1;
     }
 }
 # @lc code=end
