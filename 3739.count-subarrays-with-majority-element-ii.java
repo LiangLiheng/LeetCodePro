@@ -1,51 +1,47 @@
-#
-# @lc app=leetcode id=3739 lang=java
-#
-# [3739] Count Subarrays With Majority Element II
-#
+//
+// @lc app=leetcode id=3739 lang=java
+//
+// [3739] Count Subarrays With Majority Element II
+//
 
-# @lc code=start
+// @lc code=start
 class Solution {
-    static class FenwickTree {
-        private long[] tree;
-        private int n;
-
-        public FenwickTree(int size) {
-            n = size;
-            tree = new long[size + 1];
-        }
-
-        public void update(int index, long value) {
-            while (index <= n) {
-                tree[index] += value;
-                index += index & -index;
-            }
-        }
-
-        public long query(int index) {
-            long sum = 0;
-            while (index > 0) {
-                sum += tree[index];
-                index -= index & -index;
-            }
-            return sum;
-        }
-    }
-
     public long countMajoritySubarrays(int[] nums, int target) {
-        final int OFFSET = 100001;
-        final int MAXV = 200010;
-        FenwickTree ft = new FenwickTree(MAXV);
-        ft.update(OFFSET, 1);
-        int pref = 0;
+        int n = nums.length;
+        int[] arr = new int[n];
+        for (int i = 0; i < n; i++) {
+            arr[i] = nums[i] == target ? 1 : -1;
+        }
+        // To avoid negative prefix sums, use coordinate compression
+        int[] prefixSums = new int[n + 1];
+        prefixSums[0] = 0;
+        for (int i = 0; i < n; i++) {
+            prefixSums[i + 1] = prefixSums[i] + arr[i];
+        }
+        java.util.Set<Integer> set = new java.util.HashSet<>();
+        for (int ps : prefixSums) set.add(ps);
+        java.util.List<Integer> sorted = new java.util.ArrayList<>(set);
+        java.util.Collections.sort(sorted);
+        java.util.Map<Integer, Integer> index = new java.util.HashMap<>();
+        for (int i = 0; i < sorted.size(); i++) index.put(sorted.get(i), i + 1); // 1-indexed for BIT
+
+        // Fenwick Tree for prefix sum counts
+        class BIT {
+            long[] bit;
+            int size;
+            BIT(int n) { bit = new long[n + 2]; size = n + 2; }
+            void add(int i, long v) { while (i < size) { bit[i] += v; i += i & -i; } }
+            long sum(int i) { long res = 0; while (i > 0) { res += bit[i]; i -= i & -i; } return res; }
+        }
+        BIT bit = new BIT(sorted.size() + 2);
         long ans = 0;
-        for (int num : nums) {
-            pref += (num == target ? 1 : -1);
-            int idx = pref + OFFSET;
-            ans += ft.query(idx - 1);
-            ft.update(idx, 1);
+        for (int i = 0; i <= n; i++) {
+            int idx = index.get(prefixSums[i]);
+            // For current prefix sum, count number of prefix sums strictly less than current
+            ans += bit.sum(idx - 1);
+            bit.add(idx, 1);
         }
         return ans;
     }
 }
-# @lc code=end
+// @lc code=end
