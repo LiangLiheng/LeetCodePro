@@ -5,67 +5,70 @@
 #
 
 # @lc code=start
+import java.util.*;
 class Solution {
     public double minTime(int n, int k, int m, int[] time, double[] mul) {
-        final int FULL = (1 << n) - 1;
-        final int MAX_MASK = 1 << n;
-        int[] maxT = new int[MAX_MASK];
-        for (int mask = 0; mask < MAX_MASK; ++mask) {
-            for (int i = 0; i < n; ++i) {
-                if ((mask & (1 << i)) != 0) {
-                    maxT[mask] = Math.max(maxT[mask], time[i]);
+        if (k == 1 && n > 1) return -1.0;
+        int ALL = (1 << n) - 1;
+        Map<Long, Double> memo = new HashMap<>();
+        double res = dp(0, 0, n, k, m, time, mul, memo, ALL);
+        // Verification step: return -1.0 if state is unsolvable
+        return res == Double.POSITIVE_INFINITY ? -1.0 : res;
+    }
+    private double dp(int mask, int stage, int n, int k, int m, int[] time, double[] mul, Map<Long, Double> memo, int ALL) {
+        if (mask == ALL) return 0.0;
+        long key = ((long)mask << 3) | stage;
+        if (memo.containsKey(key)) return memo.get(key);
+        double min = Double.POSITIVE_INFINITY;
+        List<Integer> atBase = new ArrayList<>();
+        for (int i = 0; i < n; i++) if (((mask >> i) & 1) == 0) atBase.add(i);
+        int sz = atBase.size();
+        boolean foundValidMove = false;
+        // Generate all groups of 1..k people to cross
+        for (int group = 1; group <= Math.min(k, sz); ++group) {
+            List<int[]> combs = combs(atBase, group);
+            for (int[] groupArr : combs) {
+                int nextMask = mask;
+                int maxTime = 0;
+                for (int idx : groupArr) { nextMask |= 1 << idx; maxTime = Math.max(maxTime, time[idx]); }
+                double crossTime = maxTime * mul[stage];
+                int adv = (int)Math.floor(crossTime) % m;
+                int nextStage = (stage + adv) % m;
+                if (nextMask == ALL) {
+                    min = Math.min(min, crossTime);
+                    foundValidMove = true;
+                    continue;
                 }
-            }
-        }
-        final double INF = 1e18;
-        double[][][] memo = new double[MAX_MASK][2][m];
-        for (int i = 0; i < MAX_MASK; ++i) {
-            for (int p = 0; p < 2; ++p) {
-                for (int s = 0; s < m; ++s) {
-                    memo[i][p][s] = -1.0;
-                }
-            }
-        }
-        class DfsHelper {
-            double dfs(int mask, int pos, int stage) {
-                if (mask == FULL) {
-                    return 0.0;
-                }
-                if (memo[mask][pos][stage] >= 0.0) {
-                    return memo[mask][pos][stage];
-                }
-                if (memo[mask][pos][stage] == -2.0) {
-                    return INF;
-                }
-                memo[mask][pos][stage] = -2.0;
-                double ans = INF;
-                if (pos == 0) {
-                    int smask = FULL ^ mask;
-                    for (int g = smask; g > 0; g = (g - 1) & smask) {
-                        if (Integer.bitCount(g) > k) continue;
-                        double d = maxT[g] * mul[stage];
-                        int adv = (int) Math.floor(d) % m;
-                        int nstage = (stage + adv) % m;
-                        int nmask = mask | g;
-                        ans = Math.min(ans, d + dfs(nmask, 1, nstage));
-                    }
-                } else {
-                    for (int i = 0; i < n; ++i) {
-                        if ((mask & (1 << i)) != 0) {
-                            double rt = time[i] * mul[stage];
-                            int adv = (int) Math.floor(rt) % m;
-                            int nstage = (stage + adv) % m;
-                            int nmask = mask ^ (1 << i);
-                            ans = Math.min(ans, rt + dfs(nmask, 0, nstage));
-                        }
+                // Someone must return
+                for (int ret : groupArr) {
+                    int retMask = nextMask & ~(1 << ret);
+                    double retTime = time[ret] * mul[nextStage];
+                    int retAdv = (int)Math.floor(retTime) % m;
+                    int retStage = (nextStage + retAdv) % m;
+                    double rec = dp(retMask, retStage, n, k, m, time, mul, memo, ALL);
+                    if (rec != -1.0 && rec != Double.POSITIVE_INFINITY) {
+                        min = Math.min(min, crossTime + retTime + rec);
+                        foundValidMove = true;
                     }
                 }
-                memo[mask][pos][stage] = ans;
-                return ans;
             }
         }
-        double res = new DfsHelper().dfs(0, 0, 0);
-        return res > (INF / 2) ? -1.0 : res;
+        // Verification step: if no valid move was found, return -1.0 explicitly
+        double result = foundValidMove ? min : -1.0;
+        memo.put(key, result == -1.0 ? Double.POSITIVE_INFINITY : result);
+        return result;
+    }
+    private List<int[]> combs(List<Integer> arr, int k) {
+        List<int[]> res = new ArrayList<>();
+        combsHelper(arr, k, 0, new int[k], 0, res);
+        return res;
+    }
+    private void combsHelper(List<Integer> arr, int k, int idx, int[] curr, int pos, List<int[]> res) {
+        if (pos == k) { res.add(curr.clone()); return; }
+        if (idx == arr.size()) return;
+        curr[pos] = arr.get(idx);
+        combsHelper(arr, k, idx+1, curr, pos+1, res);
+        combsHelper(arr, k, idx+1, curr, pos, res);
     }
 }
 # @lc code=end
