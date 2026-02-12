@@ -3,189 +3,92 @@
 #
 # [3625] Count Number of Trapezoids II
 #
+
 # @lc code=start
+import java.util.*;
+
 class Solution {
     public int countTrapezoids(int[][] points) {
         int n = points.length;
-        Map<Long, Integer> pointToIndex = new HashMap<>();
-        final int OFFSET = 1000;
-        final int MODD = 2001;
-        for (int i = 0; i < n; i++) {
-            long x = (long)points[i][0] + OFFSET;
-            long y = (long)points[i][1] + OFFSET;
-            long key = x * MODD + y;
-            pointToIndex.put(key, i);
+        Map<String, List<int[]>> slopeToPairs = new HashMap<>();
+        // Step 1: For each pair, compute slope as reduced fraction
+        for (int i = 0; i < n; ++i) {
+            for (int j = i + 1; j < n; ++j) {
+                int dx = points[j][0] - points[i][0];
+                int dy = points[j][1] - points[i][1];
+                int g = gcd(dx, dy);
+                dx /= g; dy /= g;
+                // Normalize direction
+                if (dx < 0) { dx = -dx; dy = -dy; }
+                else if (dx == 0 && dy < 0) { dy = -dy; }
+                String key = dx + "," + dy;
+                slopeToPairs.computeIfAbsent(key, k -> new ArrayList<>()).add(new int[]{i, j});
+            }
         }
-
-        // Compute number of unique parallelograms P using set for dedup
-        Set<String> paraSet = new HashSet<>();
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                for (int k = j + 1; k < n; k++) {
-                    // Try origin = i
-                    {
-                        long lx = (long)points[j][0] + points[k][0] - points[i][0];
-                        long ly = (long)points[j][1] + points[k][1] - points[i][1];
-                        long px = lx + OFFSET;
-                        long py = ly + OFFSET;
-                        if (px >= 0 && px < MODD && py >= 0 && py < MODD) {
-                            long key = px * MODD + py;
-                            if (pointToIndex.containsKey(key)) {
-                                int l = pointToIndex.get(key);
-                                if (l != i && l != j && l != k) {
-                                    long dx1 = (long)points[j][0] - points[i][0];
-                                    long dy1 = (long)points[j][1] - points[i][1];
-                                    long dx2 = (long)points[k][0] - points[i][0];
-                                    long dy2 = (long)points[k][1] - points[i][1];
-                                    long cross = dx1 * dy2 - dy1 * dx2;
-                                    if (cross != 0) {
-                                        int[] idxs = {i, j, k, l};
-                                        // manual sort for 4 ints
-                                        int a = idxs[0], b = idxs[1], c = idxs[2], d = idxs[3];
-                                        if (a > b) { int t = a; a = b; b = t; }
-                                        if (a > c) { int t = a; a = c; c = t; }
-                                        if (a > d) { int t = a; a = d; d = t; }
-                                        if (b > c) { int t = b; b = c; c = t; }
-                                        if (b > d) { int t = b; b = d; d = t; }
-                                        if (c > d) { int t = c; c = d; d = t; }
-                                        String skey = a + "_" + b + "_" + c + "_" + d;
-                                        paraSet.add(skey);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Try origin = j
-                    {
-                        long lx = (long)points[i][0] + points[k][0] - points[j][0];
-                        long ly = (long)points[i][1] + points[k][1] - points[j][1];
-                        long px = lx + OFFSET;
-                        long py = ly + OFFSET;
-                        if (px >= 0 && px < MODD && py >= 0 && py < MODD) {
-                            long key = px * MODD + py;
-                            if (pointToIndex.containsKey(key)) {
-                                int l = pointToIndex.get(key);
-                                if (l != i && l != j && l != k) {
-                                    long dx1 = (long)points[i][0] - points[j][0];
-                                    long dy1 = (long)points[i][1] - points[j][1];
-                                    long dx2 = (long)points[k][0] - points[j][0];
-                                    long dy2 = (long)points[k][1] - points[j][1];
-                                    long cross = dx1 * dy2 - dy1 * dx2;
-                                    if (cross != 0) {
-                                        int[] idxs = {i, j, k, l};
-                                        int a = idxs[0], b = idxs[1], c = idxs[2], d = idxs[3];
-                                        if (a > b) { int t = a; a = b; b = t; }
-                                        if (a > c) { int t = a; a = c; c = t; }
-                                        if (a > d) { int t = a; a = d; d = t; }
-                                        if (b > c) { int t = b; b = c; c = t; }
-                                        if (b > d) { int t = b; b = d; d = t; }
-                                        if (c > d) { int t = c; c = d; d = t; }
-                                        String skey = a + "_" + b + "_" + c + "_" + d;
-                                        paraSet.add(skey);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Try origin = k
-                    {
-                        long lx = (long)points[i][0] + points[j][0] - points[k][0];
-                        long ly = (long)points[i][1] + points[j][1] - points[k][1];
-                        long px = lx + OFFSET;
-                        long py = ly + OFFSET;
-                        if (px >= 0 && px < MODD && py >= 0 && py < MODD) {
-                            long key = px * MODD + py;
-                            if (pointToIndex.containsKey(key)) {
-                                int l = pointToIndex.get(key);
-                                if (l != i && l != j && l != k) {
-                                    long dx1 = (long)points[i][0] - points[k][0];
-                                    long dy1 = (long)points[i][1] - points[k][1];
-                                    long dx2 = (long)points[j][0] - points[k][0];
-                                    long dy2 = (long)points[j][1] - points[k][1];
-                                    long cross = dx1 * dy2 - dy1 * dx2;
-                                    if (cross != 0) {
-                                        int[] idxs = {i, j, k, l};
-                                        int a = idxs[0], b = idxs[1], c = idxs[2], d = idxs[3];
-                                        if (a > b) { int t = a; a = b; b = t; }
-                                        if (a > c) { int t = a; a = c; c = t; }
-                                        if (a > d) { int t = a; a = d; d = t; }
-                                        if (b > c) { int t = b; b = c; c = t; }
-                                        if (b > d) { int t = b; b = d; d = t; }
-                                        if (c > d) { int t = c; c = d; d = t; }
-                                        String skey = a + "_" + b + "_" + c + "_" + d;
-                                        paraSet.add(skey);
-                                    }
-                                }
-                            }
-                        }
-                    }
+        Set<String> unique = new HashSet<>();
+        int res = 0;
+        // Step 2: For each group of pairs with same slope, process all disjoint pairs
+        for (List<int[]> group : slopeToPairs.values()) {
+            int m = group.size();
+            for (int a = 0; a < m; ++a) {
+                for (int b = a + 1; b < m; ++b) {
+                    int[] p1 = group.get(a), p2 = group.get(b);
+                    Set<Integer> quad = new HashSet<>(Arrays.asList(p1[0], p1[1], p2[0], p2[1]));
+                    if (quad.size() < 4) continue; // not 4 distinct points
+                    int[] idxs = quad.stream().mapToInt(x -> x).toArray();
+                    // Step 3: Verify convexity
+                    if (!isConvex(points, idxs)) continue;
+                    int[] sorted = idxs.clone();
+                    Arrays.sort(sorted);
+                    String sig = sorted[0] + "," + sorted[1] + "," + sorted[2] + "," + sorted[3];
+                    if (unique.add(sig)) res++;
                 }
             }
         }
-        long para = paraSet.size();
-
-        // Compute S: trapezoid edge pairs
-        Map<String, Map<Long, Set<Integer>>> collinearGroups = new HashMap<>();
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                long x1 = points[i][0];
-                long y1 = points[i][1];
-                long x2 = points[j][0];
-                long y2 = points[j][1];
-                long dx = x2 - x1;
-                long dy = y2 - y1;
-                if (dx == 0 && dy == 0) continue;
-                boolean flip = (dx < 0 || (dx == 0 && dy < 0));
-                if (flip) {
-                    dx = -dx;
-                    dy = -dy;
-                }
-                long g = gcd(dx, dy);
-                if (g != 0) {
-                    dx /= g;
-                    dy /= g;
-                }
-                String slopeKey = dx + "," + dy;
-                long b = dy * x1 - dx * y1;
-                Map<Long, Set<Integer>> lineMap = collinearGroups.computeIfAbsent(slopeKey, k -> new HashMap<>());
-                Set<Integer> pts = lineMap.computeIfAbsent(b, k -> new HashSet<>());
-                pts.add(i);
-                pts.add(j);
-            }
-        }
-
-        long S = 0;
-        for (String slope : collinearGroups.keySet()) {
-            Map<Long, Set<Integer>> lineMap = collinearGroups.get(slope);
-            List<Integer> sizes = new ArrayList<>();
-            for (Set<Integer> pts : lineMap.values()) {
-                int sz = pts.size();
-                if (sz >= 2) {
-                    sizes.add(sz);
-                }
-            }
-            int m = sizes.size();
-            for (int a = 0; a < m; a++) {
-                for (int b = a + 1; b < m; b++) {
-                    long c1 = (long) sizes.get(a) * (sizes.get(a) - 1) / 2;
-                    long c2 = (long) sizes.get(b) * (sizes.get(b) - 1) / 2;
-                    S += c1 * c2;
-                }
-            }
-        }
-
-        return (int) (S - para);
+        return res;
     }
-
-    private long gcd(long a, long b) {
-        a = Math.abs(a);
-        b = Math.abs(b);
-        while (b != 0) {
-            long temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
+    // Helper for GCD
+    private int gcd(int a, int b) {
+        if (b == 0) return Math.abs(a);
+        return gcd(b, a % b);
+    }
+    // Check convexity via cross product
+    private boolean isConvex(int[][] pts, int[] idxs) {
+        List<int[]> list = new ArrayList<>();
+        for (int i : idxs) list.add(pts[i]);
+        // Try all circular orderings, find one that is convex
+        int perm[] = new int[4];
+        for (int i = 0; i < 4; ++i) perm[i] = i;
+        do {
+            boolean ok = true;
+            int prev = 0;
+            for (int j = 0; j < 4; ++j) {
+                int[] a = list.get(perm[j]);
+                int[] b = list.get(perm[(j + 1) % 4]);
+                int[] c = list.get(perm[(j + 2) % 4]);
+                int cp = cross(a, b, c);
+                if (j == 0) prev = cp;
+                else if ((long)cp * prev < 0) { ok = false; break; }
+            }
+            if (ok) return true;
+        } while (nextPerm(perm));
+        return false;
+    }
+    private int cross(int[] a, int[] b, int[] c) {
+        int x1 = b[0] - a[0], y1 = b[1] - a[1];
+        int x2 = c[0] - b[0], y2 = c[1] - b[1];
+        return x1 * y2 - y1 * x2;
+    }
+    // Lexical permutation
+    private boolean nextPerm(int[] arr) {
+        int i = arr.length - 2;
+        while (i >= 0 && arr[i] >= arr[i+1]) i--;
+        if (i < 0) return false;
+        int j = arr.length - 1;
+        while (arr[j] <= arr[i]) j--;
+        int t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        Arrays.sort(arr, i+1, arr.length);
+        return true;
     }
 }
 # @lc code=end
