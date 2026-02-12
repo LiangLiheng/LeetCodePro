@@ -9,37 +9,84 @@ class Solution {
     public long minMoves(int[] balance) {
         int n = balance.length;
         long total = 0;
+        for (int b : balance) total += b;
+        if (total < 0) return -1;
         int negIdx = -1;
-        long deficit = 0;
-        for (int i = 0; i < n; i++) {
-            total += (long) balance[i];
+        for (int i = 0; i < n; ++i) {
             if (balance[i] < 0) {
                 negIdx = i;
-                deficit = - (long) balance[i];
+                break;
             }
         }
-        if (total < 0) {
+        if (negIdx == -1) return 0;
+        if (n == 1) return balance[0] < 0 ? -1 : 0;
+        long moves = 0;
+        int[] arr = balance.clone();
+        // Simulate step-by-step transfer
+        int need = -arr[negIdx];
+        int left = (negIdx - 1 + n) % n;
+        int right = (negIdx + 1) % n;
+        while (need > 0) {
+            // Try to transfer from left neighbor
+            if (arr[left] > 0) {
+                arr[left]--;
+                arr[negIdx]++;
+                moves++;
+                need--;
+                continue;
+            }
+            // Try to transfer from right neighbor
+            if (arr[right] > 0) {
+                arr[right]--;
+                arr[negIdx]++;
+                moves++;
+                need--;
+                continue;
+            }
+            // If both neighbors cannot give, try to move balance from further away
+            // Simulate moving from further left
+            int dist = 2;
+            boolean transferred = false;
+            while (dist < n) {
+                int src = (negIdx - dist + n) % n;
+                if (arr[src] > 0) {
+                    // Move balance stepwise toward negIdx
+                    for (int d = src; d != left; d = (d + 1) % n) {
+                        if (arr[d] > 0) {
+                            arr[d]--;
+                            arr[(d + 1) % n]++;
+                            moves++;
+                        }
+                    }
+                    break;
+                }
+                dist++;
+            }
+            // Simulate moving from further right
+            dist = 2;
+            while (dist < n) {
+                int src = (negIdx + dist) % n;
+                if (arr[src] > 0) {
+                    // Move balance stepwise toward negIdx
+                    for (int d = src; d != right; d = (d - 1 + n) % n) {
+                        if (arr[d] > 0) {
+                            arr[d]--;
+                            arr[(d - 1 + n) % n]++;
+                            moves++;
+                        }
+                    }
+                    break;
+                }
+                dist++;
+            }
+            // After attempting all, check again
+            if (arr[left] > 0) continue;
+            if (arr[right] > 0) continue;
+            // If unable to transfer any more, return -1
             return -1;
         }
-        if (deficit == 0) {
-            return 0;
-        }
-        int maxCost = n / 2;
-        long[] capPerCost = new long[maxCost + 1];
-        for (int i = 0; i < n; i++) {
-            if (i == negIdx) continue;
-            int diff = Math.abs(i - negIdx);
-            int cost = Math.min(diff, n - diff);
-            capPerCost[cost] += (long) balance[i];
-        }
-        long moves = 0;
-        long remain = deficit;
-        for (int c = 1; c <= maxCost; c++) {
-            long take = Math.min(remain, capPerCost[c]);
-            moves += take * (long) c;
-            remain -= take;
-            if (remain <= 0) break;
-        }
+        // Verify all balances are non-negative
+        for (int b : arr) if (b < 0) return -1;
         return moves;
     }
 }
