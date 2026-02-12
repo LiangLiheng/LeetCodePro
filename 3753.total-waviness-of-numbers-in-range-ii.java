@@ -3,100 +3,57 @@
 #
 # [3753] Total Waviness of Numbers in Range II
 #
-
 # @lc code=start
 class Solution {
-    private String s;
-    private int L;
-    private long[][][][] memoSum;
-    private long[][][][] memoCnt;
+    // Helper function to compute total waviness up to a bound using digit DP
+    private long wavinessUpTo(long bound) {
+        char[] digits = Long.toString(bound).toCharArray();
+        int n = digits.length;
+        // DP[pos][tight][prev1][prev2][leading_zero][has_started]
+        Long[][][][][][] dp = new Long[n+1][2][11][11][2][2];
+        // prev1/prev2: -1 (10) means undefined
+        return dfs(0, 1, 10, 10, 1, 0, digits, dp);
+    }
+
+    // pos: current digit position
+    // tight: is this prefix still tight to the bound
+    // prev1, prev2: previous two digits (0-9 or 10 for undefined)
+    // leading_zero: 1 if still placing leading zeros
+    // has_started: 1 if we've started placing non-leading-zero digits
+    private long dfs(int pos, int tight, int prev1, int prev2, int leading_zero, int has_started, char[] digits, Long[][][][][][] dp) {
+        if (pos == digits.length) {
+            return 0;
+        }
+        if (dp[pos][tight][prev1][prev2][leading_zero][has_started] != null) {
+            return dp[pos][tight][prev1][prev2][leading_zero][has_started];
+        }
+        long res = 0;
+        int limit = tight == 1 ? digits[pos]-'0' : 9;
+        for (int d = 0; d <= limit; ++d) {
+            int next_tight = (tight == 1 && d == limit) ? 1 : 0;
+            int next_leading_zero = (leading_zero == 1 && d == 0) ? 1 : 0;
+            int next_has_started = (has_started == 1 || (d != 0 && leading_zero == 1)) ? 1 : has_started;
+            int next_prev2 = prev1;
+            int next_prev1 = d;
+            long add = 0;
+            // Only count peaks/valleys if not leading zeros and at least three digits have been placed
+            if (has_started == 1 && leading_zero == 0 && pos >=2) {
+                if (prev2 != 10 && prev1 !=10) {
+                    if (prev1 > prev2 && prev1 > d) add = 1; // peak
+                    if (prev1 < prev2 && prev1 < d) add = 1; // valley
+                }
+            }
+            res += add + dfs(pos+1, next_tight, next_prev1, next_prev2, next_leading_zero, next_has_started, digits, dp);
+        }
+        dp[pos][tight][prev1][prev2][leading_zero][has_started] = res;
+        return res;
+    }
 
     public long totalWaviness(long num1, long num2) {
-        return calc(num2) - calc(num1 - 1);
-    }
-
-    private long calc(long n) {
-        if (n < 1) return 0;
-        s = String.valueOf(n);
-        L = s.length();
-        memoSum = new long[L + 1][2][11][11];
-        memoCnt = new long[L + 1][2][11][11];
-        initMemo(memoSum, -1L);
-        initMemo(memoCnt, -1L);
-        return dfsSum(0, 1, 10, 10);
-    }
-
-    private void initMemo(long[][][][] memo, long val) {
-        for (int i = 0; i <= L; i++) {
-            for (int j = 0; j < 2; j++) {
-                for (int k = 0; k < 11; k++) {
-                    for (int m = 0; m < 11; m++) {
-                        memo[i][j][k][m] = val;
-                    }
-                }
-            }
-        }
-    }
-
-    private long dfsCnt(int pos, int tight, int p1, int p2) {
-        if (pos == L) {
-            return 1L;
-        }
-        if (memoCnt[pos][tight][p1][p2] != -1L) {
-            return memoCnt[pos][tight][p1][p2];
-        }
-        long res = 0L;
-        int up = tight == 1 ? s.charAt(pos) - '0' : 9;
-        for (int d = 0; d <= up; d++) {
-            int ntight = (tight == 1 && d == up) ? 1 : 0;
-            int np1, np2;
-            if (p1 == 10) {
-                np1 = d == 0 ? 10 : d;
-                np2 = 10;
-            } else {
-                np2 = p1;
-                np1 = d;
-            }
-            res += dfsCnt(pos + 1, ntight, np1, np2);
-        }
-        return memoCnt[pos][tight][p1][p2] = res;
-    }
-
-    private long dfsSum(int pos, int tight, int p1, int p2) {
-        if (pos == L) {
-            return 0L;
-        }
-        if (memoSum[pos][tight][p1][p2] != -1L) {
-            return memoSum[pos][tight][p1][p2];
-        }
-        long res = 0L;
-        int up = tight == 1 ? s.charAt(pos) - '0' : 9;
-        for (int d = 0; d <= up; d++) {
-            int ntight = (tight == 1 && d == up) ? 1 : 0;
-            int np1, np2;
-            long contrib = 0L;
-            if (p1 == 10) {
-                // not started
-                np1 = (d == 0) ? 10 : d;
-                np2 = 10;
-            } else {
-                // started
-                if (p2 != 10) {
-                    int left = p2;
-                    int mid = p1;
-                    int right = d;
-                    if ((mid > left && mid > right) || (mid < left && mid < right)) {
-                        contrib = 1L;
-                    }
-                }
-                np2 = p1;
-                np1 = d;
-            }
-            long subcnt = dfsCnt(pos + 1, ntight, np1, np2);
-            long subsum = dfsSum(pos + 1, ntight, np1, np2);
-            res += contrib * subcnt + subsum;
-        }
-        return memoSum[pos][tight][p1][p2] = res;
+        if (num1 > num2) return 0;
+        long ans = wavinessUpTo(num2);
+        if (num1 > 1) ans -= wavinessUpTo(num1-1);
+        return ans;
     }
 }
 # @lc code=end
